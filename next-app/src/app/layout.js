@@ -39,6 +39,7 @@ export const metadata = {
 
 import StylesProvider from "@/components/ThemeRegistry";
 import ClientTemplate from "@/components/ClientTemplate/ClientTemplate";
+import CircularMenu from "@/components/CircularMenu/CircularMenu";
 
 export default function RootLayout({ children }) {
   return (
@@ -48,12 +49,14 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
           href="//cdn.materialdesignicons.com/3.0.39/css/materialdesignicons.min.css"
         />
+        <link href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css" rel="stylesheet" />
       </head>
       <body className={`${orbitron.variable} ${electrolize.variable}`} suppressHydrationWarning>
         <StylesProvider>
           <ClientTemplate>
             {children}
           </ClientTemplate>
+          <CircularMenu />
         </StylesProvider>
       </body>
     </html>
