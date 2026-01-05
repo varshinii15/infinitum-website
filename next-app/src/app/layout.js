@@ -39,6 +39,8 @@ export const metadata = {
 
 import StylesProvider from "@/components/ThemeRegistry";
 import ClientTemplate from "@/components/ClientTemplate/ClientTemplate";
+import CircularMenu from "@/components/CircularMenu/CircularMenu";
+import SimpleHeader from "@/components/SimpleHeader/SimpleHeader";
 import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({ children }) {
@@ -49,6 +51,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
           href="//cdn.materialdesignicons.com/3.0.39/css/materialdesignicons.min.css"
         />
+        <link href="https://cdn.jsdelivr.net/npm/remixicon@2.5.0/fonts/remixicon.css" rel="stylesheet" />
       </head>
       <body className={`${orbitron.variable} ${electrolize.variable}`} suppressHydrationWarning>
         <StylesProvider>
@@ -56,6 +59,8 @@ export default function RootLayout({ children }) {
             <ClientTemplate>
               {children}
             </ClientTemplate>
+          <SimpleHeader />
+          <CircularMenu />
           </AuthProvider>
         </StylesProvider>
       </body>
