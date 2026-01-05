@@ -39,6 +39,7 @@ export const metadata = {
 
 import StylesProvider from "@/components/ThemeRegistry";
 import ClientTemplate from "@/components/ClientTemplate/ClientTemplate";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({ children }) {
   return (
@@ -51,9 +52,11 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${orbitron.variable} ${electrolize.variable}`} suppressHydrationWarning>
         <StylesProvider>
-          <ClientTemplate>
-            {children}
-          </ClientTemplate>
+          <AuthProvider>
+            <ClientTemplate>
+              {children}
+            </ClientTemplate>
+          </AuthProvider>
         </StylesProvider>
       </body>
     </html>

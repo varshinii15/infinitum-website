@@ -95,7 +95,7 @@ class Component extends React.Component {
               className={classes.brand}
               onLinkStart={this.onLinkStart}
             />
-            <span className={classes.dates}>FEB 13 & FEB 14</span>
+            <span className={classes.dates}>FEB 13 & 14</span>
             <Menu
               className={classes.menu}
               animation={{ duration: { enter: 400 } }}
