@@ -18,21 +18,28 @@ export default function CircularMenu() {
     const [activeIndex, setActiveIndex] = useState(0);
     const [hoveredIndex, setHoveredIndex] = useState(null);
     const [mouseAngle, setMouseAngle] = useState(null);
+    const [isMounted, setIsMounted] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
     const menuRef = useRef(null);
     const centerRef = useRef({ x: 0, y: 0 });
 
+    // Set mounted state to avoid hydration mismatch
     useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isMounted) return;
         const index = MENU_ITEMS.findIndex(item => item.href === pathname);
         if (index !== -1) {
             setActiveIndex(index);
         }
-    }, [pathname]);
+    }, [pathname, isMounted]);
 
     // Calculate center position when menu opens
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && typeof window !== 'undefined') {
             centerRef.current = {
                 x: window.innerWidth / 2,
                 y: window.innerHeight / 2
@@ -153,67 +160,69 @@ export default function CircularMenu() {
                 <i className={`ri-close-line ${styles.closeIcon}`}></i>
             </button>
 
-            {/* Pie Menu */}
-            <div className={styles.pieMenu}>
-                <svg 
-                    viewBox="-160 -160 320 320" 
-                    className={styles.pieSvg}
-                >
-                    {/* Segment backgrounds */}
+            {/* Pie Menu - only render after mount to avoid hydration mismatch */}
+            {isMounted && (
+                <div className={styles.pieMenu}>
+                    <svg 
+                        viewBox="-160 -160 320 320" 
+                        className={styles.pieSvg}
+                    >
+                        {/* Segment backgrounds */}
+                        {MENU_ITEMS.map((item, index) => {
+                            const isHovered = hoveredIndex === index;
+                            const isActive = activeIndex === index;
+                            
+                            return (
+                                <g key={index}>
+                                    {/* Segment path */}
+                                    <path
+                                        d={getSegmentPath(index)}
+                                        className={`${styles.segment} ${isHovered ? styles.segmentHovered : ''} ${isActive ? styles.segmentActive : ''}`}
+                                        onClick={(e) => handleItemClick(e, index)}
+                                    />
+                                    
+                                    {/* Segment border */}
+                                    <path
+                                        d={getSegmentPath(index)}
+                                        className={styles.segmentBorder}
+                                    />
+                                </g>
+                            );
+                        })}
+                    </svg>
+
+                    {/* Icons positioned on segments */}
                     {MENU_ITEMS.map((item, index) => {
+                        const pos = getIconPosition(index);
                         const isHovered = hoveredIndex === index;
                         const isActive = activeIndex === index;
                         
                         return (
-                            <g key={index}>
-                                {/* Segment path */}
-                                <path
-                                    d={getSegmentPath(index)}
-                                    className={`${styles.segment} ${isHovered ? styles.segmentHovered : ''} ${isActive ? styles.segmentActive : ''}`}
-                                    onClick={(e) => handleItemClick(e, index)}
-                                />
-                                
-                                {/* Segment border */}
-                                <path
-                                    d={getSegmentPath(index)}
-                                    className={styles.segmentBorder}
-                                />
-                            </g>
+                            <a
+                                key={index}
+                                href={item.href}
+                                className={`${styles.segmentIcon} ${isHovered ? styles.iconHovered : ''} ${isActive ? styles.iconActive : ''}`}
+                                style={{
+                                    '--x': `${pos.x}px`,
+                                    '--y': `${pos.y}px`,
+                                }}
+                                onClick={(e) => handleItemClick(e, index)}
+                            >
+                                <i className={item.icon}></i>
+                                <span className={styles.iconLabel}>{item.label}</span>
+                            </a>
                         );
                     })}
-                </svg>
 
-                {/* Icons positioned on segments */}
-                {MENU_ITEMS.map((item, index) => {
-                    const pos = getIconPosition(index);
-                    const isHovered = hoveredIndex === index;
-                    const isActive = activeIndex === index;
-                    
-                    return (
-                        <a
-                            key={index}
-                            href={item.href}
-                            className={`${styles.segmentIcon} ${isHovered ? styles.iconHovered : ''} ${isActive ? styles.iconActive : ''}`}
-                            style={{
-                                '--x': `${pos.x}px`,
-                                '--y': `${pos.y}px`,
-                            }}
-                            onClick={(e) => handleItemClick(e, index)}
-                        >
-                            <i className={item.icon}></i>
-                            <span className={styles.iconLabel}>{item.label}</span>
-                        </a>
-                    );
-                })}
-
-                {/* Center circle with close button */}
-                <button className={styles.centerCircle} onClick={() => setIsOpen(false)}>
-                    <i className="ri-close-line" style={{ fontSize: 28, color: '#c72071' }}></i>
-                    {hoveredIndex !== null && (
-                        <span className={styles.centerLabel}>{MENU_ITEMS[hoveredIndex].label}</span>
-                    )}
-                </button>
-            </div>
+                    {/* Center circle with close button */}
+                    <button className={styles.centerCircle} onClick={() => setIsOpen(false)}>
+                        <i className="ri-close-line" style={{ fontSize: 28, color: '#c72071' }}></i>
+                        {hoveredIndex !== null && (
+                            <span className={styles.centerLabel}>{MENU_ITEMS[hoveredIndex].label}</span>
+                        )}
+                    </button>
+                </div>
+            )}
         </nav>
     );
 }

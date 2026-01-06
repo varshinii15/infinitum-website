@@ -39,7 +39,7 @@
     background-color: var(--primary-color);
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 0 15px rgba(199, 32, 113, 0.4);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     position: relative;
     z-index: 1001;
@@ -110,23 +110,23 @@
 
 /* Segment Styling */
 .segment {
-    fill: rgba(26, 2, 11, 0.9);
+    fill: rgba(20, 20, 25, 0.9);
     cursor: pointer;
     transition: fill 0.2s, filter 0.2s;
 }
 
 .segment:hover,
 .segmentHovered {
-    fill: rgba(199, 32, 113, 0.3);
+    fill: rgba(199, 32, 113, 0.2);
 }
 
 .segmentActive {
-    fill: rgba(199, 32, 113, 0.5);
+    fill: rgba(199, 32, 113, 0.35);
 }
 
 .segmentBorder {
     fill: none;
-    stroke: rgba(199, 32, 113, 0.6);
+    stroke: rgba(255, 255, 255, 0.15);
     stroke-width: 1;
     pointer-events: none;
 }
@@ -147,8 +147,8 @@
     color: var(--white-color);
     font-size: 22px;
     text-decoration: none;
-    background: rgba(26, 2, 11, 0.8);
-    border: 2px solid var(--primary-color);
+    background: rgba(20, 20, 25, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     transition: all 0.25s ease;
     z-index: 10;
@@ -157,13 +157,13 @@
 .segmentIcon:hover,
 .iconHovered {
     background: var(--primary-color);
-    transform: translate(var(--x), var(--y)) scale(1.2);
-    box-shadow: 0 0 20px var(--primary-color);
+    transform: translate(var(--x), var(--y)) scale(1.15);
+    border-color: var(--primary-color);
 }
 
 .iconActive {
     background: var(--primary-color);
-    box-shadow: 0 0 15px var(--primary-color), 0 0 0 3px rgba(255,255,255,0.3);
+    border-color: #fff;
 }
 
 /* Center Circle - Close Button */
@@ -174,23 +174,23 @@
     transform: translate(-50%, -50%);
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, #1a020b, #2a0415);
-    border: 2px solid var(--primary-color);
+    background: linear-gradient(135deg, #151518, #1f1f25);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 20;
-    box-shadow: 0 0 30px rgba(199, 32, 113, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     cursor: pointer;
     transition: all 0.3s ease;
     outline: none;
 }
 
 .centerCircle:hover {
-    background: linear-gradient(135deg, #2a0415, #3a0620);
-    box-shadow: 0 0 40px rgba(199, 32, 113, 0.6);
+    background: linear-gradient(135deg, #1f1f25, #2a2a32);
+    border-color: var(--primary-color);
     transform: translate(-50%, -50%) scale(1.05);
 }
 
