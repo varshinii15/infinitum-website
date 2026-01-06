@@ -4,64 +4,32 @@ import PropTypes from 'prop-types';
 import { QRCodeSVG } from 'qrcode.react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import api from '@/services/api'; // Add import for api
 
 import { withStyles } from '@/tools/withStyles';
 import { Secuence as SecuenceComponent } from '@/components/Secuence';
 
-// --- Interactive 3D Face Grid (Three.js Version) ---
-class InteractiveFace extends React.Component {
+// --- Identity Data Core (Three.js Version) ---
+class IdentityNode extends React.Component {
     constructor(props) {
         super(props);
         this.mountRef = React.createRef();
-        this.isDragging = false;
-        this.isRotating = false;
-        this.dragIndex = -1;
-        this.previousMouse = { x: 0, y: 0 };
-        this.mouse = new THREE.Vector2();
-        this.raycaster = new THREE.Raycaster();
-        this.plane = new THREE.Plane();
-        this.intersectPoint = new THREE.Vector3();
-        this.samplingRate = 10; // RESTORED: Lower value = more points (smoother surface)
-        this.isCompMounted = false;
-        this.loadId = 0; // TRACKER: Prevents ghost models from old loads
+        this.frameId = null;
     }
 
     componentDidMount() {
-        this.isCompMounted = true;
         this.initThree();
         window.addEventListener('resize', this.handleResize);
-        
-        // Input Listeners
-        const element = this.mountRef.current;
-        if(element) {
-            element.addEventListener('mousedown', this.onMouseDown);
-            element.addEventListener('mousemove', this.onMouseMove);
-            window.addEventListener('mouseup', this.onMouseUp);
-            element.addEventListener('touchstart', this.onTouchStart, { passive: false });
-            element.addEventListener('touchmove', this.onTouchMove, { passive: false });
-            window.addEventListener('touchend', this.onTouchEnd);
-        }
     }
 
     componentWillUnmount() {
-        this.isCompMounted = false;
         cancelAnimationFrame(this.frameId);
         window.removeEventListener('resize', this.handleResize);
         
         const element = this.mountRef.current;
-        if (element) {
-            element.removeEventListener('mousedown', this.onMouseDown);
-            element.removeEventListener('mousemove', this.onMouseMove);
-            element.removeEventListener('touchstart', this.onTouchStart);
-            element.removeEventListener('touchmove', this.onTouchMove);
-        }
-        window.removeEventListener('mouseup', this.onMouseUp);
-        window.removeEventListener('touchend', this.onTouchEnd);
-
-        // Cleanup Three.js
         if (this.renderer) {
             this.renderer.dispose();
-            if(element && this.renderer.domElement.parentNode === element) {
+            if (element && this.renderer.domElement.parentNode === element) {
                 element.removeChild(this.renderer.domElement);
             }
         }
@@ -70,7 +38,7 @@ class InteractiveFace extends React.Component {
     initThree = () => {
         if (!this.mountRef.current) return;
         
-        // Clears previous canvas to ensure clean slate
+        // Clean container
         while(this.mountRef.current.firstChild) {
             this.mountRef.current.removeChild(this.mountRef.current.firstChild);
         }
@@ -78,13 +46,13 @@ class InteractiveFace extends React.Component {
         const width = this.mountRef.current.clientWidth;
         const height = this.mountRef.current.clientHeight;
 
-        // Capture the current load ID
-        const myLoadId = ++this.loadId;
-
         // 1. Scene & Camera
         this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-        this.camera.position.z = 8;
+        // Add subtle fog for depth
+        this.scene.fog = new THREE.FogExp2(0x000000, 0.03);
+        
+        this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+        this.camera.position.z = 6;
 
         // 2. Renderer
         this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -92,113 +60,70 @@ class InteractiveFace extends React.Component {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.mountRef.current.appendChild(this.renderer.domElement);
 
-        // 3. Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(2, 2, 5);
-        this.scene.add(directionalLight);
+        // --- GAMIFICATION LOGIC FROM DATA ---
+        const { user } = this.props;
+        
+        // COLOR: Payment Status (Cyan = Paid/Online, Red = Unpaid/Locked)
+        const baseColorHex = user.generalFeePaid ? 0x00f0ff : 0xff0055;
+        
+        // COMPLEXITY/SPEED: Year (Fallback to 1 if not present)
+        const year = user.year || 1; 
+        this.speedMultiplier = 0.5 + (year * 0.2); // Faster for seniors
 
-        // 4. Load Model
-        const loader = new GLTFLoader();
-        loader.load('/models/face.glb', (gltf) => {
-            // FIX: Prevent ghost model by checking if this load is still relevant
-            if (!this.isCompMounted || this.loadId !== myLoadId) return;
+        // SHAPE: Origin (PSG = Core/Organic, External = Prism/Sharp)
+        const isInternal = user.isPSGStudent;
 
-            const model = gltf.scene;
-            let targetMesh = null;
-            model.traverse((child) => {
-                if (child.isMesh && !targetMesh) targetMesh = child;
-            });
+        // 3. Objects Group
+        this.coreGroup = new THREE.Group();
+        this.scene.add(this.coreGroup);
 
-            if (targetMesh) {
-                this.geometry = targetMesh.geometry.clone();
-                
-                // FIX: Rotate model geometry 90 degrees to make it upright
-                this.geometry.rotateX(1.5*Math.PI);
+        // A. INNER CORE (The Identity)
+        const innerGeometry = isInternal 
+            ? new THREE.IcosahedronGeometry(1.2, 1) // Organic D20 look
+            : new THREE.OctahedronGeometry(1.2, 0); // Sharp Diamond look
 
-                this.geometry.center(); 
-                this.geometry.computeBoundingBox();
-                
-                const size = new THREE.Vector3();
-                this.geometry.boundingBox.getSize(size);
-                const maxDim = Math.max(size.x, size.y, size.z);
-                
-                if (maxDim > 0) {
-                    const targetSize = 5; 
-                    const scaleFactor = targetSize / maxDim;
-                    this.geometry.scale(scaleFactor, scaleFactor, scaleFactor);
-                }
-                
-                // A. Create Geometry
-                this.sparseGeometry = new THREE.BufferGeometry();
-                const originalPos = this.geometry.attributes.position.array;
-                const sparsePos = [];
-                const indices = [];
-                
-                // Extract points with revised sampling rate for smoothness
-                for (let i = 0; i < originalPos.length; i += 3 * this.samplingRate) {
-                    sparsePos.push(originalPos[i], originalPos[i+1], originalPos[i+2]);
-                }
-                
-                this.sparseGeometry.setAttribute('position', new THREE.Float32BufferAttribute(sparsePos, 3));
-
-                // B. Generate Clean Grid Connections
-                const posCount = sparsePos.length / 3;
-                // Tuned distance: tighter threshold ensures we only connect immediate neighbors
-                const connectionDist = 0.65; 
-                
-                for(let i = 0; i < posCount; i++) {
-                    const x1 = sparsePos[i*3];
-                    const y1 = sparsePos[i*3+1];
-                    const z1 = sparsePos[i*3+2];
-                    
-                    for(let j = i + 1; j < posCount; j++) {
-                        const x2 = sparsePos[j*3];
-                        const y2 = sparsePos[j*3+1];
-                        const z2 = sparsePos[j*3+2];
-                        
-                        // Simple distance check
-                        const distSq = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1) + (z2-z1)*(z2-z1);
-                        
-                        if(distSq < connectionDist * connectionDist) {
-                            indices.push(i, j);
-                        }
-                    }
-                }
-                this.sparseGeometry.setIndex(indices);
-
-                // C. Visual Elements
-                const wireframeMaterial = new THREE.LineBasicMaterial({
-                    color: 0x00ff64,
-                    opacity: 0.15,
-                    transparent: true
-                });
-                // Using LineSegments ensures lines move when points move
-                this.wireframeMesh = new THREE.LineSegments(this.sparseGeometry, wireframeMaterial);
-
-                const pointsMaterial = new THREE.PointsMaterial({ 
-                    color: 0x00ff64, 
-                    size: 0.045, // Slightly larger dots
-                    sizeAttenuation: true 
-                });
-                this.points = new THREE.Points(this.sparseGeometry, pointsMaterial);
-
-                this.faceGroup = new THREE.Group();
-                this.faceGroup.add(this.wireframeMesh);
-                this.faceGroup.add(this.points);
-
-                // Clear scene just in case
-                this.scene.clear();
-                this.scene.add(ambientLight);
-                this.scene.add(directionalLight);
-                this.scene.add(this.faceGroup);
-
-                this.raycaster.params.Points.threshold = 0.15;
-            }
-        }, undefined, (error) => {
-            console.error('Error loading /models/face.glb:', error);
+        const innerMaterial = new THREE.MeshBasicMaterial({
+            color: baseColorHex,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.8
         });
+        this.innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
+        this.coreGroup.add(this.innerMesh);
+
+        // B. OUTER SHELL (The Shield)
+        const outerGeometry = new THREE.IcosahedronGeometry(1.8, 1);
+        const outerMaterial = new THREE.MeshBasicMaterial({
+            color: baseColorHex,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.15
+        });
+        this.outerMesh = new THREE.Mesh(outerGeometry, outerMaterial);
+        this.coreGroup.add(this.outerMesh);
+
+        // C. SENIOR RING (Rank Indicator - Only for Year 3+)
+        if (year >= 3) {
+            const ringGeometry = new THREE.TorusGeometry(2.8, 0.02, 16, 100);
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: baseColorHex,
+                transparent: true,
+                opacity: 0.6
+            });
+            this.ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+            // Add to scene directly so it rotates independently
+            this.scene.add(this.ringMesh); 
+        }
+
+        // D. LIGHTING (Glow Effect)
+        const pointLight = new THREE.PointLight(baseColorHex, user.generalFeePaid ? 2 : 0.8, 10);
+        pointLight.position.set(0, 0, 0);
+        this.scene.add(pointLight);
+
+        // Add a secondary rim light
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        rimLight.position.set(5, 5, 5);
+        this.scene.add(rimLight);
 
         this.animate();
     }
@@ -212,122 +137,33 @@ class InteractiveFace extends React.Component {
         this.renderer.setSize(width, height);
     }
 
-    // --- Interaction ---
-    
-    updateMouse(clientX, clientY) {
-        if(!this.mountRef.current) return;
-        const rect = this.mountRef.current.getBoundingClientRect();
-        this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
-    }
-
-    handleInputStart = (clientX, clientY) => {
-        if (!this.points) return;
-        this.updateMouse(clientX, clientY);
-        this.raycaster.setFromCamera(this.mouse, this.camera);
-
-        const intersects = this.raycaster.intersectObject(this.points);
-
-        if (intersects.length > 0) {
-            this.isDragging = true;
-            this.dragIndex = intersects[0].index; // This is the index in the SPARSE geometry
-            
-            this.plane.setFromNormalAndCoplanarPoint(
-                this.camera.getWorldDirection(this.plane.normal),
-                intersects[0].point
-            );
-            
-            if(this.mountRef.current) this.mountRef.current.style.cursor = 'grabbing';
-            
-            // Highlight logic ...
-            if(!this.points.geometry.attributes.color) {
-                const count = this.points.geometry.attributes.position.count;
-                this.points.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
-                const colors = this.points.geometry.attributes.color;
-                for(let i=0; i<count; i++) colors.setXYZ(i, 0, 1, 0.4); 
-            }
-            
-            const colors = this.points.geometry.attributes.color;
-            colors.setXYZ(this.dragIndex, 1, 0, 0.3); // Red highlight
-            colors.needsUpdate = true;
-            this.points.material.vertexColors = true;
-        } else {
-            // Start Rotation
-            this.isRotating = true;
-            this.previousMouse = { x: clientX, y: clientY };
-            if(this.mountRef.current) this.mountRef.current.style.cursor = 'grab';
-        }
-    }
-
-    handleInputMove = (clientX, clientY) => {
-        this.updateMouse(clientX, clientY);
-        
-        if (this.isDragging && this.dragIndex !== -1) {
-            this.raycaster.setFromCamera(this.mouse, this.camera);
-            if (this.raycaster.ray.intersectPlane(this.plane, this.intersectPoint)) {
-                
-                const localPoint = this.intersectPoint.clone().applyMatrix4(this.faceGroup.matrixWorld.clone().invert());
-                
-                // 1. Update the visible dot
-                const sparsePos = this.sparseGeometry.attributes.position;
-                sparsePos.setXYZ(this.dragIndex, localPoint.x, localPoint.y, localPoint.z);
-                sparsePos.needsUpdate = true;
-
-                // 2. Update the actual mesh vertex (Mapping back using sampling rate)
-                const realIndex = this.dragIndex * this.samplingRate;
-                const meshPos = this.geometry.attributes.position;
-                
-                // Update the specific vertex
-                meshPos.setXYZ(realIndex, localPoint.x, localPoint.y, localPoint.z);
-
-                meshPos.needsUpdate = true;
-            }
-        } else if (this.isRotating) {
-            // Manual Rotation
-            const deltaX = clientX - this.previousMouse.x;
-            this.faceGroup.rotation.y += deltaX * 0.005;
-            this.previousMouse = { x: clientX, y: clientY };
-
-        } else if (this.points && this.mountRef.current) {
-            this.raycaster.setFromCamera(this.mouse, this.camera);
-            const intersects = this.raycaster.intersectObject(this.points);
-            this.mountRef.current.style.cursor = intersects.length > 0 ? 'grab' : 'default';
-        }
-    }
-
-    handleInputEnd = () => {
-        this.isDragging = false;
-        this.isRotating = false;
-        this.dragIndex = -1;
-        if(this.mountRef.current) this.mountRef.current.style.cursor = 'default';
-        
-        if(this.points && this.points.material.vertexColors) {
-            this.points.material.vertexColors = false;
-            this.points.material.needsUpdate = true;
-        }
-    }
-
-    onMouseDown = (e) => this.handleInputStart(e.clientX, e.clientY);
-    onMouseMove = (e) => this.handleInputMove(e.clientX, e.clientY);
-    onMouseUp = () => this.handleInputEnd();
-    
-    onTouchStart = (e) => {
-         // passive: false on listener allows preventDefault
-         if(e.cancelable && e.preventDefault) e.preventDefault();
-         const touch = e.touches[0];
-         this.handleInputStart(touch.clientX, touch.clientY);
-    }
-    onTouchMove = (e) => {
-        if(e.cancelable && e.preventDefault) e.preventDefault();
-        const touch = e.touches[0];
-        this.handleInputMove(touch.clientX, touch.clientY);
-    }
-    onTouchEnd = () => this.handleInputEnd();
-
     animate = () => {
         this.frameId = requestAnimationFrame(this.animate);
         
-        // Removed auto-rotation
+        const time = Date.now() * 0.001;
+        
+        // Animate Core
+        if (this.innerMesh) {
+            this.innerMesh.rotation.x = -time * 0.2 * this.speedMultiplier;
+            this.innerMesh.rotation.z = time * 0.1 * this.speedMultiplier;
+        }
+
+        // Animate Shell
+        if (this.outerMesh) {
+            this.outerMesh.rotation.x = time * 0.1 * this.speedMultiplier;
+            this.outerMesh.rotation.y = time * 0.15 * this.speedMultiplier;
+        }
+
+        // Animate Ring (if exists)
+        if (this.ringMesh) {
+            this.ringMesh.rotation.x = Math.PI / 2 + (Math.sin(time * 0.5) * 0.1);
+            this.ringMesh.rotation.y = time * 0.3;
+        }
+
+        // Gentle float of the whole group
+        if (this.coreGroup) {
+            this.coreGroup.position.y = Math.sin(time) * 0.1;
+        }
 
         if (this.renderer && this.scene && this.camera) {
             this.renderer.render(this.scene, this.camera);
@@ -335,11 +171,37 @@ class InteractiveFace extends React.Component {
     }
 
     render() {
+        const { user } = this.props;
+        // Text overlay styles
+        const overlayStyle = {
+            position: 'absolute', 
+            top: 20, 
+            left: 20, 
+            zIndex: 10,
+            fontFamily: 'monospace', 
+            pointerEvents: 'none',
+            textShadow: '0 0 5px rgba(0,0,0,0.8)'
+        };
+        const statusColor = user.generalFeePaid ? '#00f0ff' : '#ff0055';
+
         return (
-            <div 
-                ref={this.mountRef} 
-                style={{ width: '100%', height: '100%', outline: 'none' }} 
-            />
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                {/* Status Overlay */}
+                <div style={overlayStyle}>
+                    <div style={{ color: statusColor, fontWeight: 'bold', fontSize: '0.9rem' }}>
+                        STATUS: {user.generalFeePaid ? 'ONLINE' : 'RESTRICTED'}
+                    </div>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginTop: 4 }}>
+                        LEVEL {user.year || 1} // {user.isPSGStudent ? 'CORE' : 'PRISM'}
+                    </div>
+                </div>
+                
+                {/* Three.js Canvas */}
+                <div 
+                    ref={this.mountRef} 
+                    style={{ width: '100%', height: '100%', outline: 'none' }} 
+                />
+            </div>
         );
     }
 }
@@ -385,10 +247,7 @@ const styles = theme => {
             '&::-webkit-scrollbar': { width: 4 },
             '&::-webkit-scrollbar-thumb': { backgroundColor: theme.color.primary.dark, borderRadius: 2 },
             '@media (max-width: 960px)': {
-                flex: 'none',
-                width: '100%',
-                overflowY: 'visible',
-                height: 'auto'
+                display: 'contents' // Flatten children for reordering
             }
         },
         scannerContainer: {
@@ -399,7 +258,9 @@ const styles = theme => {
             border: `1px solid ${theme.color.primary.dark}`,
             borderRadius: 16,
             overflow: 'hidden',
-            boxShadow: `0 0 30px ${theme.color.primary.dark}40`
+            boxShadow: `0 0 30px ${theme.color.primary.dark}40`,
+            // Mobile Order: 4 (After Personal Info)
+            '@media (max-width: 960px)': { order: 4 }
         },
         scannerOverlay: {
             position: 'absolute',
@@ -417,7 +278,9 @@ const styles = theme => {
             boxShadow: `0 0 20px ${theme.color.secondary.main}40`,
             display: 'flex',
             alignItems: 'center',
-            gap: 15
+            gap: 15,
+            // Mobile Order: 1 (First)
+            '@media (max-width: 960px)': { order: 1 }
         },
         avatarCircle: {
             width: 50,
@@ -474,7 +337,10 @@ const styles = theme => {
             paddingRight: 5,
             paddingBottom: 10,
             '&::-webkit-scrollbar': { width: 4 },
-            '&::-webkit-scrollbar-thumb': { backgroundColor: theme.color.secondary.dark, borderRadius: 2 }
+            '&::-webkit-scrollbar-thumb': { backgroundColor: theme.color.secondary.dark, borderRadius: 2 },
+            '@media (max-width: 960px)': {
+                display: 'contents' // Flatten children for reordering
+            }
         },
         dataPanel: {
             background: 'rgba(10, 5, 10, 0.7)',
@@ -487,6 +353,12 @@ const styles = theme => {
                 boxShadow: `0 0 20px ${theme.color.secondary.main}20`
             }
         },
+        // Helpers for mobile ordering of panels
+        panelOrder2: { '@media (max-width: 960px)': { order: 2 } }, // QR/Status
+        panelOrder3: { '@media (max-width: 960px)': { order: 3 } }, // Personal
+        panelOrder5: { '@media (max-width: 960px)': { order: 5 } }, // Academic
+        panelOrder6: { '@media (max-width: 960px)': { order: 6 } }, // Events
+        
         panelHeader: {
             fontFamily: theme.typography.primary,
             fontSize: '1.1rem',
@@ -554,17 +426,146 @@ const styles = theme => {
         },
         qrBox: {
             background: '#fff',
-            padding: 5,
-            borderRadius: 6,
+            padding: 8,
+            borderRadius: 8,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
         },
+        qrContainer: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 8,
+            cursor: 'zoom-in',
+            flexShrink: 0,
+            '&:hover $qrBox': {
+                transform: 'scale(1.02) translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(0,255,100,0.2)'
+            },
+            '&:hover $qrExpandHint': {
+                color: '#fff'
+            }
+        },
+        qrExpandHint: {
+            fontSize: '0.65rem',
+            color: '#aaa',
+            transition: 'color 0.3s ease',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
+        },
+        
+        // --- QR OVERLAY ---
+        qrOverlay: {
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            zIndex: 2000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            animation: '$fadeIn 0.3s ease',
+            backdropFilter: 'blur(5px)'
+        },
+        qrExpandedContent: {
+            background: '#fff',
+            padding: 20,
+            borderRadius: 20,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 20,
+            maxWidth: '90%',
+            animation: '$scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        },
+        qrExpandedLabel: {
+            color: '#000',
+            fontFamily: theme.typography.primary,
+            fontSize: '1.2rem',
+            textAlign: 'center'
+        },
+        qrCloseHint: {
+            color: '#fff',
+            marginTop: 20,
+            fontFamily: theme.typography.secondary,
+            fontSize: '0.8rem',
+            letterSpacing: 1
+        },
+        '@keyframes fadeIn': { from: { opacity: 0 } },
+        '@keyframes scaleIn': { from: { transform: 'scale(0.8)', opacity: 0 } },
+
+        // --- ID Viewer Modal ---
+        idViewerOverlay: {
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            zIndex: 2001, // Higher than QR overlay
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: '$fadeIn 0.3s ease',
+            backdropFilter: 'blur(5px)'
+        },
+        idViewerContent: {
+            background: '#1a1a1a',
+            padding: 20,
+            borderRadius: 16,
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 15,
+            animation: '$scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+        },
+        idViewerHeader: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            color: '#fff',
+            fontFamily: theme.typography.primary,
+        },
+        idViewerCloseBtn: {
+            background: 'rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: '#fff',
+            cursor: 'pointer',
+            borderRadius: '50%',
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background 0.2s',
+            '&:hover': {
+                background: 'rgba(255,255,255,0.2)'
+            }
+        },
+        idViewerMedia: {
+            flex: 1,
+            overflow: 'auto',
+            '& img, & embed': {
+                maxWidth: '100%',
+                maxHeight: 'calc(90vh - 100px)',
+                display: 'block',
+                margin: '0 auto',
+                borderRadius: 8
+            }
+        },
+
         actionsRow: {
             display: 'flex',
             justifyContent: 'flex-end',
             gap: 12,
-            marginTop: 'auto'
+            marginTop: 'auto',
+            '@media (max-width: 960px)': { order: 7 }
         },
         actionBtn: {
             padding: '10px 24px',
@@ -597,9 +598,22 @@ class ProfilePage extends React.Component {
         super(props);
         this.state = {
             user: null,
-            loading: true
-            // registeredEvents removed
+            loading: true,
+            registeredEvents: [],
+            isQRExpanded: false, // QR Expansion State
+            isUploadingId: false, // uploading State
+            viewIdUrl: null, // URL for viewing uploaded ID
+            isIdViewerOpen: false, // ID Viewer Modal State
+            idCardPreviewUrl: null, // Blob URL for the ID
+            idCardPreviewType: null, // 'image' or 'pdf'
+            isIdLoading: false // Loading state for fetching ID
         };
+        this.fileInputRef = React.createRef();
+    }
+
+    // Toggle QR Modal
+    toggleQRExpansion = () => {
+        this.setState(prev => ({ isQRExpanded: !prev.isQRExpanded }));
     }
 
     componentDidMount() {
@@ -611,9 +625,38 @@ class ProfilePage extends React.Component {
             const { authService } = await import('@/services/authService');
             const response = await authService.getProfile();
             this.setState({ user: response.user, loading: false });
-            // Removed fetchRegisteredEvents call
+            
+            // Fetch registered events after successful auth
+            if (response.user) {
+                this.fetchRegisteredEvents();
+                if (response.user.idCardUrl) {
+                    // Construct the full URL for viewing the ID card
+                    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+                    this.setState({ viewIdUrl: `${baseUrl}/api/auth/files/${response.user.idCardUrl}` });
+                }
+            }
         } catch (error) {
             window.location.href = '/auth?type=login';
+        }
+    };
+
+    fetchRegisteredEvents = async () => {
+        try {
+            const response = await api.get('/api/events/user');
+            const data = response.data;
+            
+            let events = [];
+            if (Array.isArray(data)) {
+                events = data;
+            } else if (data.events && Array.isArray(data.events)) {
+                events = data.events;
+            } else if (data.data && Array.isArray(data.data)) {
+                events = data.data;
+            }
+            
+            this.setState({ registeredEvents: events });
+        } catch (error) {
+            console.error("Failed to fetch registered events", error);
         }
     };
 
@@ -634,9 +677,101 @@ class ProfilePage extends React.Component {
         window.location.href = '/';
     };
 
+    handleIdCardClick = () => {
+        if (this.fileInputRef.current) {
+            this.fileInputRef.current.click();
+        }
+    };
+
+    handleViewIdCard = async () => {
+        if (!this.state.viewIdUrl || this.state.isIdLoading) return;
+
+        this.setState({ isIdLoading: true });
+        try {
+            const response = await api.get(this.state.viewIdUrl, {
+                responseType: 'blob', // Important to get the file as a blob
+                withCredentials: true
+            });
+
+            const contentType = response.headers['content-type'];
+            const blob = new Blob([response.data], { type: contentType });
+            const previewUrl = URL.createObjectURL(blob);
+
+            this.setState({
+                idCardPreviewUrl: previewUrl,
+                idCardPreviewType: contentType.startsWith('image/') ? 'image' : 'pdf',
+                isIdViewerOpen: true
+            });
+
+        } catch (error) {
+            console.error('Error fetching ID card:', error);
+            alert('Could not load the ID card. Please try again.');
+        } finally {
+            this.setState({ isIdLoading: false });
+        }
+    };
+
+    handleCloseIdViewer = () => {
+        if (this.state.idCardPreviewUrl) {
+            URL.revokeObjectURL(this.state.idCardPreviewUrl);
+        }
+        this.setState({
+            isIdViewerOpen: false,
+            idCardPreviewUrl: null,
+            idCardPreviewType: null
+        });
+    };
+
+    handleIdCardUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            alert('Invalid file format. Please upload a PDF, JPEG, PNG, or WebP file.');
+            return;
+        }
+
+        // Validate file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+            alert('File size is too large. Max allowed size is 10MB.');
+            return;
+        }
+
+        const formData = new FormData();
+        // Using 'idCard' as field name, common convention for named uploads
+        formData.append('idCard', file);
+
+        this.setState({ isUploadingId: true });
+
+        try {
+            await api.post('/api/auth/user/id-card', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                withCredentials: true // Ensure cookies are sent
+            });
+            alert('ID Card uploaded successfully!');
+            // Refresh user profile to reflect any changes
+            this.checkAuth();
+        } catch (error) {
+            console.error('ID upload error:', error);
+            const msg = error.response?.data?.message || 'Failed to upload ID Card.';
+            alert(msg);
+        } finally {
+            this.setState({ isUploadingId: false });
+            // Reset input value to allow re-uploading the same file if needed
+            if (this.fileInputRef.current) {
+                this.fileInputRef.current.value = '';
+            }
+        }
+    };
+
     render() {
         const { classes } = this.props;
-        const { user, loading } = this.state;
+        const { user, loading, registeredEvents, isQRExpanded, isUploadingId, viewIdUrl, isIdViewerOpen, idCardPreviewUrl, idCardPreviewType, isIdLoading } = this.state;
 
         if (loading || !user) return null;
 
@@ -647,13 +782,8 @@ class ProfilePage extends React.Component {
                         
                         {/* LEFT COLUMN: VISUALS + IDENTITY */}
                         <div className={classes.leftColumn}>
-                            {/* Interactive Face */}
-                            <div className={classes.scannerContainer}>
-                                <InteractiveFace />
-                                <div className={classes.scannerOverlay} />
-                            </div>
-
-                            {/* Main Identity Card */}
+                            
+                            {/* 1. Main Identity Card (First on Mobile) */}
                             <div className={classes.identityCard}>
                                 <div className={classes.avatarCircle}>
                                     {user.name?.charAt(0).toUpperCase()}
@@ -668,78 +798,157 @@ class ProfilePage extends React.Component {
                                     )}
                                 </div>
                             </div>
+
+                            {/* 2. Interactive Graph (Fourth on Mobile) */}
+                            <div className={classes.scannerContainer}>
+                                <IdentityNode user={user} />
+                                <div className={classes.scannerOverlay} />
+                            </div>
+
                         </div>
 
                         {/* RIGHT COLUMN: DATA DETAILS */}
                         <div className={classes.rightColumn}>
-                             {/* Personal Info */}
-                            <div className={classes.dataPanel}>
-                                <h3 className={classes.panelHeader}>Personal Information</h3>
-                                <div className={classes.dataGrid}>
-                                    <div className={classes.dataField}>
-                                        <label className={classes.fieldLabel}>Email</label>
-                                        <div className={classes.fieldValue}>{user.email}</div>
+                             
+                             {/* 3. Personal Profile & QR (Merged) */}
+                             <div className={`${classes.dataPanel} ${classes.panelOrder2}`}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap-reverse', gap: 20}}>
+                                    
+                                    {/* Info Side */}
+                                    <div style={{flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 12}}>
+                                        <h3 className={classes.panelHeader} style={{marginBottom: 10}}>Profile Details</h3>
+                                        <div className={classes.dataGrid}>
+                                            <div className={classes.dataField}>
+                                                <label className={classes.fieldLabel}>Phone</label>
+                                                <div className={classes.fieldValue}>{user.phone}</div>
+                                            </div>
+                                            <div className={classes.dataField}>
+                                                <label className={classes.fieldLabel}>Gender</label>
+                                                <div className={classes.fieldValue}>{user.gender || '-'}</div>
+                                            </div>
+                                            <div className={classes.dataField} style={{gridColumn: '1 / -1'}}>
+                                                <label className={classes.fieldLabel}>College / Institution</label>
+                                                <div className={classes.fieldValue} style={{whiteSpace: 'normal', lineHeight: 1.4}}>{user.college}</div>
+                                            </div>
+                                            <div className={classes.dataField} style={{gridColumn: '1 / -1'}}>
+                                                <label className={classes.fieldLabel}>Department</label>
+                                                <div className={classes.fieldValue}>{user.department}</div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className={classes.dataField}>
-                                        <label className={classes.fieldLabel}>Phone</label>
-                                        <div className={classes.fieldValue}>{user.phone}</div>
-                                    </div>
-                                    <div className={classes.dataField}>
-                                        <label className={classes.fieldLabel}>Gender</label>
-                                        <div className={classes.fieldValue}>{user.gender || 'Not Specified'}</div>
+
+                                    {/* QR Side */}
+                                    <div className={classes.qrContainer} onClick={this.toggleQRExpansion}>
+                                        <div className={classes.qrBox}>
+                                            <QRCodeSVG
+                                                value={JSON.stringify({ type: "PARTICIPANT", id: user.uniqueId })}
+                                                size={110}
+                                            />
+                                        </div>
+                                        <div className={classes.qrExpandHint}>
+                                             Tap to expand
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Academic Info */}
-                            <div className={classes.dataPanel}>
-                                <h3 className={classes.panelHeader}>Academic Information</h3>
+                            {/* 4. Account & Payment Status (Moved Down) */}
+                            <div className={`${classes.dataPanel} ${classes.panelOrder3}`}>
+                                <h3 className={classes.panelHeader}>Account Status</h3>
                                 <div className={classes.dataGrid}>
-                                    <div className={classes.dataField}>
-                                        <label className={classes.fieldLabel}>College</label>
-                                        <div className={classes.fieldValue}>{user.college}</div>
+                                    <div className={classes.dataField} style={{gridColumn: '1 / -1'}}>
+                                        <label className={classes.fieldLabel}>Email</label>
+                                        <div className={classes.fieldValue}>{user.email}</div>
                                     </div>
                                     <div className={classes.dataField}>
-                                        <label className={classes.fieldLabel}>Department</label>
-                                        <div className={classes.fieldValue}>{user.department}</div>
+                                        <label className={classes.fieldLabel}>General Fee</label>
+                                        {user.generalFeePaid ? (
+                                             <span className={classes.statusPaid}><span>●</span> Paid</span>
+                                        ) : (
+                                            <span className={classes.statusPending}>Pending</span>
+                                        )}
                                     </div>
                                     <div className={classes.dataField}>
                                         <label className={classes.fieldLabel}>Student Type</label>
                                         <div className={classes.fieldValue}>{user.isPSGStudent ? 'PSG Student' : 'External'}</div>
                                     </div>
                                     <div className={classes.dataField}>
-                                        <label className={classes.fieldLabel}>Accomodation</label>
+                                        <label className={classes.fieldLabel}>Accommodation</label>
                                         <div className={classes.fieldValue}>{user.accomodation ? 'Yes' : 'No'}</div>
+                                    </div>
+                                    <div className={classes.dataField}>
+                                        <label className={classes.fieldLabel}>Reg. Source</label>
+                                        <div className={classes.fieldValue} style={{textTransform:'capitalize'}}>{user.source}</div>
+                                    </div>
+                                </div>
+
+                                {/* ID Card Upload Section */}
+                                <div style={{ marginTop: 20, paddingTop: 15, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <input
+                                        type="file"
+                                        ref={this.fileInputRef}
+                                        style={{ display: 'none' }}
+                                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                        onChange={this.handleIdCardUpload}
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                                        <div>
+                                            <div className={classes.fieldLabel} style={{marginBottom: 2}}>Identity Verification</div>
+                                            <div style={{ fontSize: '0.7rem', color: '#888' }}>Upload College ID (Max 10MB)</div>
+                                            {user.idCardUploaded && (
+                                                <div style={{ color: '#00ff64', fontSize: '0.7rem', marginTop: 2 }}>✓ ID Card Uploaded</div>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 8 }}>
+                                            {viewIdUrl && (
+                                                <button
+                                                    className={classes.actionBtn}
+                                                    style={{ fontSize: '0.7rem', padding: '8px 16px', backgroundColor: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)'}}
+                                                    onClick={this.handleViewIdCard}
+                                                    disabled={isIdLoading}
+                                                >
+                                                    {isIdLoading ? 'Loading...' : 'View ID'}
+                                                </button>
+                                            )}
+                                            <button 
+                                                className={classes.actionBtn}
+                                                style={{ 
+                                                    fontSize: '0.7rem', 
+                                                    padding: '8px 16px', 
+                                                    backgroundColor: 'rgba(255,255,255,0.1)', 
+                                                    color: '#fff',
+                                                    border: '1px solid rgba(255,255,255,0.2)',
+                                                    minWidth: 100
+                                                }}
+                                                onClick={this.handleIdCardClick}
+                                                disabled={isUploadingId}
+                                            >
+                                                {isUploadingId ? 'Uploading...' : (user.idCardUploaded ? 'Re-upload' : 'Upload')}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                             {/* Payment Status + QR */}
-                             <div className={classes.dataPanel}>
-                                <h3 className={classes.panelHeader}>Status & Access</h3>
-                                <div className={classes.qrFlex}>
-                                    <div style={{ flex: 1 }}>
-                                        <div className={classes.paymentRow}>
-                                            <span style={{ color: '#aaa', fontSize: '0.8rem' }}>General Fee</span>
-                                            {user.generalFeePaid ? (
-                                                 <span className={classes.statusPaid}><span>●</span> Paid</span>
-                                            ) : (
-                                                <span className={classes.statusPending}>Pending</span>
-                                            )}
-                                        </div>
-                                        <div className={classes.dataField} style={{ marginTop: 10 }}>
-                                            <label className={classes.fieldLabel}>Registration Source</label>
-                                            <div className={classes.fieldValue} style={{textTransform:'capitalize'}}>{user.source}</div>
-                                        </div>
+                            {/* 5. Registered Events Section */}
+                            <div className={`${classes.dataPanel} ${classes.panelOrder6}`}>
+                                <h3 className={classes.panelHeader}>Registered Events</h3>
+                                {registeredEvents && registeredEvents.length > 0 ? (
+                                    <div className={classes.dataGrid}>
+                                        {registeredEvents.map((event, index) => (
+                                            <div key={index} className={classes.dataField}>
+                                                <label className={classes.fieldLabel}>{event.category || 'Event'}</label>
+                                                <div className={classes.fieldValue} title={event.eventName || event.name}>
+                                                    {event.eventName || event.name || 'Unnamed Event'}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                    {/* QR Code on Right */}
-                                    <div className={classes.qrBox}>
-                                        <QRCodeSVG
-                                            value={JSON.stringify({ type: "PARTICIPANT", id: user.uniqueId })}
-                                            size={80}
-                                        />
+                                ) : (
+                                    <div style={{ padding: '10px', color: '#888', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                        No registered events yet.
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Action Buttons */}
@@ -754,6 +963,47 @@ class ProfilePage extends React.Component {
 
                         </div>
                     </div>
+
+                    {/* QR EXPANSION OVERLAY */}
+                    {isQRExpanded && (
+                        <div className={classes.qrOverlay} onClick={this.toggleQRExpansion}>
+                            <div className={classes.qrExpandedContent} onClick={(e) => e.stopPropagation()}>
+                                <h3 className={classes.qrExpandedLabel}>{user.name}</h3>
+                                <QRCodeSVG
+                                    value={JSON.stringify({ type: "PARTICIPANT", id: user.uniqueId })}
+                                    size={300}
+                                />
+                                <div style={{textAlign:'center', fontSize:'0.9rem', color:'#555'}}>
+                                    {user.uniqueId}
+                                </div>
+                                <div className={classes.qrCloseHint}>
+                                    Tap outside to close
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ID VIEWER OVERLAY */}
+                    {isIdViewerOpen && (
+                        <div className={classes.idViewerOverlay} onClick={this.handleCloseIdViewer}>
+                            <div className={classes.idViewerContent} onClick={(e) => e.stopPropagation()}>
+                                <div className={classes.idViewerHeader}>
+                                    <span>Identity Verification Document</span>
+                                    <button className={classes.idViewerCloseBtn} onClick={this.handleCloseIdViewer}>
+                                        &times;
+                                    </button>
+                                </div>
+                                <div className={classes.idViewerMedia}>
+                                    {idCardPreviewType === 'image' && (
+                                        <img src={idCardPreviewUrl} alt="ID Card Preview" />
+                                    )}
+                                    {idCardPreviewType === 'pdf' && (
+                                        <embed src={idCardPreviewUrl} type="application/pdf" width="100%" height="100%" />
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </SecuenceComponent>
         );
