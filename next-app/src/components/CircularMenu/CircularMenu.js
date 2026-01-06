@@ -35,7 +35,9 @@ export default function CircularMenu() {
     const [hoveredIndex, setHoveredIndex] = useState(null);
     const [mouseAngle, setMouseAngle] = useState(null);
     const [isMounted, setIsMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const [rotationAngle, setRotationAngle] = useState(0); // Track actual rotation
+    const [showHint, setShowHint] = useState(false); // First-time user hint
     const pathname = usePathname();
     const router = useRouter();
     const menuRef = useRef(null);
@@ -44,6 +46,27 @@ export default function CircularMenu() {
     // Set mounted state to avoid hydration mismatch
     useEffect(() => {
         setIsMounted(true);
+        
+        // Check if mobile
+        const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        
+        // Check if user has seen the menu hint before
+        const hasSeenHint = localStorage.getItem('menu_hint_seen');
+        if (!hasSeenHint) {
+            // Show hint after a short delay
+            const timer = setTimeout(() => {
+                setShowHint(true);
+            }, 2000);
+            
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('resize', checkMobile);
+            };
+        }
+        
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     useEffect(() => {
@@ -107,6 +130,11 @@ export default function CircularMenu() {
         if (!isOpen && openSound) {
             openSound.play();
         }
+        // Hide hint when user clicks the menu
+        if (showHint) {
+            setShowHint(false);
+            localStorage.setItem('menu_hint_seen', 'true');
+        }
         setIsOpen(!isOpen);
         setHoveredIndex(null);
         setMouseAngle(null);
@@ -143,7 +171,8 @@ export default function CircularMenu() {
         const total = MENU_ITEMS.length;
         const segmentAngle = 360 / total;
         const angle = index * segmentAngle; // 0 = top
-        const radius = 105; // Distance from center to icon
+        // Desktop: (65+195)/2=130, Mobile: (45+135)/2=90
+        const radius = isMobile ? 90 : 130;
         
         const rad = (angle - 90) * (Math.PI / 180);
         const x = Math.cos(rad) * radius;
@@ -159,8 +188,9 @@ export default function CircularMenu() {
         const startAngle = index * segmentAngle - segmentAngle / 2 - 90;
         const endAngle = startAngle + segmentAngle;
         
-        const innerRadius = 50;
-        const outerRadius = 150;
+        // Desktop vs Mobile radii
+        const innerRadius = isMobile ? 45 : 65;
+        const outerRadius = isMobile ? 135 : 195;
         
         const startRad = startAngle * (Math.PI / 180);
         const endRad = endAngle * (Math.PI / 180);
@@ -183,11 +213,25 @@ export default function CircularMenu() {
         <nav className={`${styles.navContainer} ${isOpen ? styles.open : ''}`} ref={menuRef}>
             <div className={styles.menuBackdrop} onClick={() => setIsOpen(false)} />
 
-            {/* Toggle Button */}
-            <button className={styles.toggleBtn} onClick={toggleMenu}>
+            {/* Toggle Button with pulse animation for new users */}
+            <button className={`${styles.toggleBtn} ${showHint ? styles.pulsing : ''}`} onClick={toggleMenu}>
                 <i className={`ri-menu-3-line ${styles.menuIcon}`}></i>
                 <i className={`ri-close-line ${styles.closeIcon}`}></i>
             </button>
+
+            {/* First-time user hint tooltip - click to dismiss */}
+            {showHint && (
+                <div 
+                    className={styles.menuHint}
+                    onClick={() => {
+                        setShowHint(false);
+                        localStorage.setItem('menu_hint_seen', 'true');
+                    }}
+                >
+                    <span>Click to navigate</span>
+                    <div className={styles.hintArrow}></div>
+                </div>
+            )}
 
             {/* Pie Menu - only render after mount to avoid hydration mismatch */}
             {isMounted && (
@@ -198,7 +242,7 @@ export default function CircularMenu() {
                         style={{ transform: `rotate(${rotationAngle}deg)` }}
                     >
                         <svg 
-                            viewBox="-160 -160 320 320" 
+                            viewBox={isMobile ? "-180 -180 360 360" : "-210 -210 420 420"}
                             className={styles.pieSvg}
                         >
                             {/* Segment backgrounds */}
