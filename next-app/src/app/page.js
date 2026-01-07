@@ -13,6 +13,7 @@ import SimpleHeader from '@/components/SimpleHeader/SimpleHeader';
 import FlagshipEvent from '@/components/FlagshipEvent/FlagshipEvent';
 import EventsGrid from '@/components/EventsGrid';
 import Sponsors from '@/components/Sponsors';
+import Speakers from '@/components/Speakers';
 import { HomeFooter } from '@/components/HomeFooter';
 
 // Original had: import { Secuence } from '../components/Secuence';
@@ -161,6 +162,7 @@ class Component extends React.Component {
             <PrizePool />
             <FlagshipEvent />
             <EventsGrid />
+            <Speakers />
             <Sponsors />
             <HomeFooter />
           </div>
