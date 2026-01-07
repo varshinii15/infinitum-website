@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { eventService } from '@/services/eventservice';
+import { useAuth } from '@/context/AuthContext';
 import { eventsData, workshopsData, papersData } from '@/data/eventsData';
 import { CometCard } from '@/components/ui/comet-card';
 import styles from './EventShowcase.module.css';
 
 export default function EventShowcase({ sounds }) {
+    const { isAuthenticated, user } = useAuth();
     const [category, setCategory] = useState('events');
     const [events, setEvents] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -172,20 +174,47 @@ export default function EventShowcase({ sounds }) {
     };
 
 
-    const handleRegister = async () => {
-        // Play click sound
-        if (sounds && sounds.click) {
-            sounds.click.play();
-        }
+    const [notification, setNotification] = useState({ 
+        isOpen: false, 
+        type: '', // 'confirm', 'success', 'error'
+        title: '', 
+        message: '', 
+        onConfirm: null 
+    });
+
+    const closeNotification = () => {
+        if (sounds?.click) sounds.click.play();
+        setNotification(prev => ({ ...prev, isOpen: false }));
+    };
+
+    const handleRegisterClick = () => {
+         if (sounds?.click) sounds.click.play();
 
         const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-        if (!token) {
-            alert("Please login to register.");
-            return;
+
+        if (!isAuthenticated && !token) {
+             setNotification({
+                 isOpen: true,
+                 type: 'error',
+                 title: 'Login Required',
+                 message: 'Please login to register for this event.',
+                 onConfirm: () => closeNotification()
+             });
+             return;
         }
 
-        if (!confirm(`Are you sure you want to register for ${currentEvent.eventName}?`)) return;
+        setNotification({
+            isOpen: true,
+            type: 'confirm',
+            title: 'Confirm Registration',
+            message: `Are you sure you want to register for ${currentEvent.eventName}?`,
+            onConfirm: () => performRegistration()
+        });
+    };
 
+    const performRegistration = async () => {
+        closeNotification();
+        
         try {
             let res;
             if (category === 'events') {
@@ -197,14 +226,63 @@ export default function EventShowcase({ sounds }) {
             }
 
             if (res && res.success) {
-                alert(res.message || "Registered successfully!");
+                setNotification({
+                    isOpen: true,
+                    type: 'success',
+                    title: 'Registration Successful',
+                    message: res.message || "Registered successfully!",
+                    onConfirm: () => closeNotification()
+                });
+                
+                // Update local status
+                setEvents(prev => {
+                    const newEvents = [...prev];
+                    if (newEvents[activeEventIndex]) {
+                        newEvents[activeEventIndex] = { 
+                            ...newEvents[activeEventIndex], 
+                            isRegistered: true 
+                        };
+                    }
+                    return newEvents;
+                });
             } else {
-                alert(res?.message || "Registration failed.");
+                 setNotification({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Registration Failed',
+                    message: res?.message || "Registration failed.",
+                    onConfirm: () => closeNotification()
+                });
             }
         } catch (error) {
             console.error("Registration error:", error);
             const msg = error.response?.data?.message || "An error occurred during registration.";
-            alert(msg);
+            
+            if (error.response?.status === 401) {
+                setNotification({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Login Required',
+                    message: 'Please login to register for this event.',
+                    onConfirm: () => closeNotification()
+                });
+            } else if ((error.response?.status === 400 && msg.toLowerCase().includes("general fee"))) {
+                setNotification({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'General Fee Required',
+                    message: 'General fee payment is not done. Please complete the general fee payment to register for events.',
+                    onConfirm: () => closeNotification() // Optionally redirect to payment page
+                });
+            } else {
+                setNotification({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Error',
+                    message: msg,
+                    onConfirm: () => closeNotification()
+                });
+            }
         }
     };
 
@@ -524,12 +602,145 @@ export default function EventShowcase({ sounds }) {
 
                                 <button
                                     className={styles.registerBtn}
-                                    onClick={handleRegister}
+                                    onClick={!currentEvent.isRegistered ? handleRegisterClick : undefined}
+                                     style={{
+                                        opacity: currentEvent.isRegistered ? 0.7 : 1,
+                                        cursor: currentEvent.isRegistered ? 'default' : 'pointer',
+                                         background: currentEvent.isRegistered ? 'rgba(0, 255, 0, 0.2)' : undefined,
+                                        borderColor: currentEvent.isRegistered ? '#00ff00' : undefined,
+                                    }}
                                 >
-                                    <span>Register Now</span>
+                                    <span>{currentEvent.isRegistered ? 'Registered' : 'Register Now'}</span>
                                     {/* <i className="ri-arrow-right-up-line"></i> */}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Notification Modal */}
+             {notification.isOpen && (
+                <div 
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        zIndex: 1000,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backdropFilter: 'blur(5px)'
+                    }}
+                    onClick={(e) => {
+                         if (e.target === e.currentTarget && notification.type !== 'confirm') closeNotification();
+                    }}
+                >
+                    <div style={{
+                        width: '90%',
+                        maxWidth: '450px',
+                        background: 'rgba(26, 2, 11, 0.95)',
+                        border: '1px solid #e04e94',
+                        boxShadow: '0 0 30px rgba(199, 32, 113, 0.3)',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        animation: 'fadeIn 0.3s ease-out'
+                    }}>
+                        <div style={{
+                            padding: '20px 25px',
+                            borderBottom: '1px solid rgba(224, 78, 148, 0.2)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                             <h3 style={{ 
+                                 color: notification.type === 'error' ? '#ff3366' : 
+                                        notification.type === 'success' ? '#00ff00' : '#e04e94',
+                                 margin: 0,
+                                 fontSize: '1.2rem',
+                                 textTransform: 'uppercase',
+                                 letterSpacing: '0.05em'
+                             }}>
+                                 {notification.title}
+                             </h3>
+                             <button 
+                                 onClick={closeNotification}
+                                 style={{
+                                     background: 'none',
+                                     border: 'none',
+                                     color: 'rgba(255,255,255,0.6)',
+                                     fontSize: '1.5rem',
+                                     cursor: 'pointer'
+                                 }}
+                             >
+                                 ✕
+                             </button>
+                        </div>
+                        <div style={{ padding: '25px', color: '#ddd', fontSize: '1rem', lineHeight: '1.5' }}>
+                            {notification.message}
+                        </div>
+                        <div style={{
+                             padding: '20px 25px',
+                             background: 'rgba(0,0,0,0.2)',
+                             display: 'flex',
+                             justifyContent: 'flex-end',
+                             gap: '15px'
+                        }}>
+                            {notification.type === 'confirm' ? (
+                                <>
+                                    <button 
+                                        onClick={closeNotification}
+                                        style={{
+                                            padding: '8px 20px',
+                                            background: 'transparent',
+                                            border: '1px solid rgba(255,255,255,0.2)',
+                                            color: '#ccc',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            textTransform: 'uppercase',
+                                            fontSize: '0.85rem'
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button 
+                                        onClick={notification.onConfirm}
+                                        style={{
+                                            padding: '8px 24px',
+                                            background: 'rgba(199, 32, 113, 0.2)',
+                                            border: '1px solid #e04e94',
+                                            color: '#fff',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            textTransform: 'uppercase',
+                                            fontSize: '0.85rem',
+                                            boxShadow: '0 0 10px rgba(199, 32, 113, 0.2)'
+                                        }}
+                                    >
+                                        Confirm
+                                    </button>
+                                </>
+                            ) : (
+                                <button 
+                                    onClick={closeNotification}
+                                     style={{
+                                        padding: '8px 24px',
+                                        background: 'rgba(199, 32, 113, 0.2)',
+                                        border: '1px solid #e04e94',
+                                        color: '#fff',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        textTransform: 'uppercase',
+                                        fontSize: '0.85rem'
+                                    }}
+                                >
+                                    Close
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
