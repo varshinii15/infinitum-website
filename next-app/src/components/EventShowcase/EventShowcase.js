@@ -1,8 +1,8 @@
-'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { eventService } from '@/services/eventservice';
 import { useAuth } from '@/context/AuthContext';
+import { eventsData, workshopsData, papersData } from '@/data/eventsData';
 import { CometCard } from '@/components/ui/comet-card';
 import styles from './EventShowcase.module.css';
 
@@ -14,164 +14,86 @@ export default function EventShowcase({ sounds }) {
     const [activeEventIndex, setActiveEventIndex] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
-    // Fetch events
+    // Debug mount/unmount
     useEffect(() => {
-        const fetchEvents = async () => {
+        console.log('🏗️ EventShowcase MOUNTED');
+        return () => console.log('🗑️ EventShowcase UNMOUNTED');
+    }, []);
+
+    // Load events based on category
+    useEffect(() => {
+        console.log('🔄 Category changed to:', category);
+        const loadEvents = async () => {
             setIsLoading(true);
+            console.log('📥 Loading events for category:', category);
             try {
                 let items = [];
                 if (category === 'events') {
-                    const data = await eventService.getAllEvents();
-                    if (data.success && data.events) {
-                        // Filter out 'thooral' as requested
-                        items = data.events.filter(e => !e.eventName.toLowerCase().includes('thooral'));
-                    }
+                    console.log('📋 Using eventsData, count:', eventsData.length);
+                    // Use hardcoded eventsData
+                    items = eventsData
+                        .filter(e => !e.eventName.toLowerCase().includes('thooral'))
+                        .map(e => ({ ...e, isFullDetailsLoaded: true }));
                 } else if (category === 'workshops') {
-                    const data = await eventService.getAllWorkshops();
-                    if (data.success && data.workshops) {
-                        items = data.workshops.map(w => ({
-                            ...w,
-                            eventName: w.workshopName,
-                            oneLineDescription: w.description ? (w.description.length > 60 ? w.description.substring(0, 60) + '...' : w.description) : 'Technical Workshop',
-                            timing: w.time,
-                            // Workshop specific
-                            isWorkshop: true
-                        }));
-                    }
+                    console.log('📋 Using workshopsData, count:', workshopsData.length);
+                    // Use hardcoded workshopsData
+                    items = workshopsData.map(w => ({
+                        ...w,
+                        eventName: w.workshopName,
+                        oneLineDescription: w.tagline || w.description || 'Technical Workshop',
+                        timing: w.time,
+                        isWorkshop: true,
+                        isFullDetailsLoaded: true,
+                        teamSize: w.teamSize || 1, // Default to 1 (Individual) if not specified
+                        // Fix date format (MongoDB extended JSON)
+                        date: w.date?.$date || w.date,
+                        // Map agenda to rounds for display
+                        rounds: w.agenda ? w.agenda.map((a, i) => ({
+                            title: a.time,
+                            description: a.description,
+                            _id: a._id
+                        })) : []
+                    }));
                 } else if (category === 'papers') {
-                    const data = await eventService.getAllPapers();
-                    if (data.success && data.papers) {
-                        items = data.papers.map(p => ({
-                            ...p,
-                            eventName: p.eventName || "Paper Presentation",
-                            oneLineDescription: p.theme || 'Paper Presentation',
-                            timing: p.time,
-                            isPaper: true
-                        }));
-                    }
+                    console.log('📋 Using papersData, count:', papersData.length);
+                    // Use hardcoded papersData
+                    items = papersData.map(p => ({
+                        ...p,
+                        eventName: p.eventName || "Paper Presentation",
+                        oneLineDescription: p.tagline || p.theme || 'Paper Presentation',
+                        timing: p.time,
+                        isPaper: true,
+                        isFullDetailsLoaded: true,
+                        // Fix date format (MongoDB extended JSON)
+                        date: p.date?.$date || p.date,
+                        // Map rules to rounds for display
+                        rounds: p.rules ? p.rules.split('\n').map((rule, i) => ({
+                            title: `Rule ${i + 1}`,
+                            description: rule,
+                            _id: `rule-${i}`
+                        })) : []
+                    }));
                 }
+                console.log('✅ Setting events:', items.length, 'First item:', items[0]?.eventName);
                 setEvents(items);
                 setActiveEventIndex(0);
             } catch (error) {
-                console.error(`Failed to fetch ${category}`, error);
+                console.error(`Failed to load ${category}`, error);
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchEvents();
+        loadEvents();
     }, [category]);
 
-    // Fetch full details for the active item
+    // Fetch full details - No longer needed as all data is hardcoded
     useEffect(() => {
-        const current = events[activeEventIndex];
-        if (!current || (current.isFullDetailsLoaded && (isAuthenticated ? current.checkedRegistration : true))) return;
-
-        let isMounted = true;
-        const fetchDetails = async () => {
-            try {
-                let fullData = null;
-                let registrationStatus = null;
-
-                if (category === 'events' && current.eventId) {
-                    // Parallel fetch: Details + Registration Status
-                    const promises = [];
-                    if (!current.isFullDetailsLoaded) {
-                        promises.push(eventService.getEventById(current.eventId).then(res => res.success ? res.event : null));
-                    } else {
-                        promises.push(Promise.resolve(null));
-                    }
-                    
-                    if (isAuthenticated && !current.checkedRegistration) {
-                         promises.push(eventService.checkUserEventRegistration(current.eventId).then(res => res));
-                    } else {
-                        promises.push(Promise.resolve(null));
-                    }
-
-                    const [eventData, regData] = await Promise.all(promises);
-                    fullData = eventData;
-                    if (regData && regData.success) {
-                        registrationStatus = regData.registered;
-                    }
-
-                } else if (category === 'workshops' && current.workshopId) {
-                     // Parallel fetch for workshops
-                    const promises = [];
-                    if (!current.isFullDetailsLoaded) {
-                         promises.push(eventService.getWorkshopById(current.workshopId).then(res => res.success ? res.workshop : null));
-                    } else {
-                        promises.push(Promise.resolve(null));
-                    }
-                    
-                    if (isAuthenticated && !current.checkedRegistration) {
-                         promises.push(eventService.checkUserWorkshopRegistration(current.workshopId).then(res => res));
-                    } else {
-                        promises.push(Promise.resolve(null));
-                    }
-                    
-                    const [workshopData, regData] = await Promise.all(promises);
-                    
-                    if (workshopData) {
-                        const w = workshopData;
-                        fullData = {
-                            ...w,
-                            eventName: w.workshopName,
-                            oneLineDescription: w.description ? (w.description.length > 60 ? w.description.substring(0, 60) + '...' : w.description) : 'Technical Workshop',
-                            timing: w.time,
-                            isWorkshop: true
-                        };
-                    }
-                    if (regData && regData.success) {
-                        registrationStatus = regData.registered;
-                    }
-
-                } else if (category === 'papers' && current.paperId) {
-                    // Logic for papers (if needed in future, currently just fetch details)
-                    if (!current.isFullDetailsLoaded) {
-                         const res = await eventService.getPaperById(current.paperId);
-                         if (res && res.success) {
-                            const p = res.paper;
-                            fullData = {
-                                ...p,
-                                eventName: p.eventName || "Paper Presentation",
-                                oneLineDescription: p.theme || 'Paper Presentation',
-                                timing: p.time,
-                                isPaper: true
-                            };
-                        }
-                    }
-                    // TODO: create checkUserPaperRegistration in backend/frontend if available
-                }
-
-                if (isMounted && (fullData || registrationStatus !== null)) {
-                    setEvents(prev => {
-                        const newEvents = [...prev];
-                        if (newEvents[activeEventIndex]) {
-                             const updates = {};
-                             if (fullData) {
-                                 Object.assign(updates, fullData);
-                                 updates.isFullDetailsLoaded = true;
-                             }
-                             if (registrationStatus !== null) {
-                                 updates.isRegistered = registrationStatus;
-                                 updates.checkedRegistration = true;
-                             }
-                             newEvents[activeEventIndex] = { ...newEvents[activeEventIndex], ...updates };
-                        }
-                        return newEvents;
-                    });
-                }
-            } catch (err) {
-                console.error("Error fetching full details:", err);
-            }
-        };
-
-        const timer = setTimeout(fetchDetails, 100); 
-        return () => {
-            isMounted = false;
-            clearTimeout(timer);
-        };
-    }, [activeEventIndex, category, events, isAuthenticated]);
+        // Kept empty effect or removed to prevent errors if logic depended on it,
+        // but since we mark isFullDetailsLoaded: true, the previous logic (if any remained) would exit early.
+    }, [activeEventIndex, category, events]);
 
     // Lock body scroll when overlay is open
     useEffect(() => {
@@ -215,7 +137,11 @@ export default function EventShowcase({ sounds }) {
         }
     };
 
-    const currentEvent = events[activeEventIndex];
+    const DEFAULT_EVENT_IMAGE = '/images/events/paper_presentation.png';
+    const currentEvent = events[activeEventIndex] ? {
+        ...events[activeEventIndex],
+        image: events[activeEventIndex].image || DEFAULT_EVENT_IMAGE
+    } : null;
 
     const handleEventChange = (direction) => {
         if (events.length === 0) return;
@@ -360,74 +286,16 @@ export default function EventShowcase({ sounds }) {
         }
     };
 
-
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (isDropdownOpen && !e.target.closest('.category-dropdown')) {
+            if (isDropdownOpen && dropdownRef.current && !dropdownRef.current.contains(e.target)) {
                 setIsDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isDropdownOpen]);
-
-    const dropdownContainerStyle = {
-        position: 'absolute',
-        top: '100px', // Adjusted to not overlap with potentially hidden header or padding
-        left: '40px',
-        zIndex: 60,
-        pointerEvents: 'auto',
-        fontFamily: 'inherit'
-    };
-
-    const dropdownToggleStyle = {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 24px',
-        background: 'rgba(26, 2, 11, 0.6)', // Theme background main
-        border: '1px solid rgba(224, 78, 148, 0.3)', // Theme secondary light
-        boxShadow: '0 0 15px rgba(199, 32, 113, 0.2)', // Theme secondary main
-        color: '#e04e94', // Theme secondary light
-        minWidth: '220px',
-        cursor: 'pointer',
-        fontSize: '1rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.15em',
-        transition: 'all 0.3s ease',
-        backdropFilter: 'blur(10px)',
-        clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
-        userSelect: 'none'
-    };
-
-    const dropdownMenuStyle = {
-        position: 'absolute',
-        top: 'calc(100% + 5px)',
-        left: '0',
-        width: '100%',
-        background: 'rgba(26, 2, 11, 0.95)', // Theme background main
-        border: '1px solid rgba(224, 78, 148, 0.2)', // Theme secondary light
-        color: '#fff',
-        zIndex: 61,
-        display: isDropdownOpen ? 'block' : 'none',
-        clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)', 
-        boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-    };
-
-    const dropdownItemStyle = (itemCategory) => ({
-        padding: '12px 24px',
-        cursor: 'pointer',
-        color: category === itemCategory ? '#e04e94' : 'rgba(255, 255, 255, 0.7)',
-        background: category === itemCategory ? 'rgba(199, 32, 113, 0.15)' : 'transparent',
-        fontSize: '0.9rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        transition: 'all 0.2s ease',
-        borderLeft: category === itemCategory ? '3px solid #e04e94' : '3px solid transparent'
-    });
 
     const categoryLabels = {
         'events': 'Events',
@@ -438,38 +306,28 @@ export default function EventShowcase({ sounds }) {
     const currentCategoryLabel = categoryLabels[category];
 
     const renderDropdown = () => (
-        <div style={dropdownContainerStyle} className="category-dropdown">
-            <div 
-                style={dropdownToggleStyle} 
+        <div className={styles.categoryDropdown} ref={dropdownRef}>
+            <div
+                className={`${styles.dropdownToggle} ${isDropdownOpen ? styles.active : ''}`}
                 onClick={() => {
                     if (sounds?.click) sounds.click.play();
                     setIsDropdownOpen(!isDropdownOpen);
                 }}
             >
                 <span>{currentCategoryLabel}</span>
-                <span style={{ 
-                    fontSize: '0.8rem', 
-                    transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.3s ease'
-                }}>▼</span>
+                <span className={styles.dropdownArrow}>▼</span>
             </div>
-            <div style={dropdownMenuStyle}>
+            <div className={`${styles.dropdownMenu} ${isDropdownOpen ? styles.show : ''}`}>
                 {Object.keys(categoryLabels).map((cat) => (
                     <div
                         key={cat}
-                        style={dropdownItemStyle(cat)}
-                        onClick={() => {
+                        className={`${styles.dropdownItem} ${category === cat ? styles.selected : ''}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('🖱️ Dropdown item clicked:', cat);
                             if (sounds?.click) sounds.click.play();
                             setCategory(cat);
                             setIsDropdownOpen(false);
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(199, 32, 113, 0.1)';
-                            e.currentTarget.style.color = '#fff';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = category === cat ? 'rgba(199, 32, 113, 0.15)' : 'transparent';
-                            e.currentTarget.style.color = category === cat ? '#e04e94' : 'rgba(255, 255, 255, 0.7)';
                         }}
                     >
                         {categoryLabels[cat]}
@@ -482,31 +340,24 @@ export default function EventShowcase({ sounds }) {
     if (!currentEvent && !isLoading && events.length === 0) {
         return (
             <div className={styles.showcase} style={{ justifyContent: 'center', alignItems: 'center', display: 'flex', flexDirection: 'column' }}>
-               {renderDropdown()}
-               <div style={{color: 'rgba(255,255,255,0.7)', marginTop: '0', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '0.1em'}}>No {categoryLabels[category]} available</div>
+                {renderDropdown()}
+                <div style={{ color: 'rgba(255,255,255,0.7)', marginTop: '0', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>No {categoryLabels[category]} available</div>
             </div>
         );
-   }
+    }
 
     if (!currentEvent) return null;
 
     return (
         <div className={styles.showcase}>
-            {renderDropdown()}
+            <div className={styles.controlsContainer}>
+                {renderDropdown()}
 
-            {/* Register Button - Top Right */}
-            <button 
-                className={styles.registerButton} 
-                onClick={!currentEvent.isRegistered ? handleRegisterClick : undefined}
-                style={{
-                    opacity: currentEvent.isRegistered ? 0.7 : 1,
-                    cursor: currentEvent.isRegistered ? 'default' : 'pointer',
-                    background: currentEvent.isRegistered ? 'rgba(0, 255, 0, 0.2)' : undefined,
-                    borderColor: currentEvent.isRegistered ? '#00ff00' : undefined,
-                }}
-            >
-                <span>{currentEvent.isRegistered ? 'Registered' : 'Register Now'}</span>
-            </button>
+                {/* Register Button */}
+                <button className={styles.registerButton} onClick={handleRegister}>
+                    <span>Register Now</span>
+                </button>
+            </div>
 
             {/* Event Name with Bracket Frame - Moved outside main layout for alignment */}
             <div className={styles.headerContainer}>
@@ -534,12 +385,14 @@ export default function EventShowcase({ sounds }) {
             <div className={styles.mainContent}>
                 {/* Left Stats Panel */}
                 <div className={styles.statsPanel}>
-                    <div className={styles.statItem}>
-                        <div className={styles.statLabel}>Team Size</div>
-                        <div className={styles.statValue}>
-                            {currentEvent.teamSize === 1 ? 'Individual' : `${currentEvent.teamSize} Members`}
+                    {currentEvent.teamSize && (
+                        <div className={styles.statItem}>
+                            <div className={styles.statLabel}>Team Size</div>
+                            <div className={styles.statValue}>
+                                {currentEvent.teamSize === 1 ? 'Individual' : `${currentEvent.teamSize} Members`}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className={styles.statItem}>
                         <div className={styles.statLabel}>Venue</div>
@@ -625,8 +478,12 @@ export default function EventShowcase({ sounds }) {
                     {currentEvent.rounds && currentEvent.rounds.length > 0 && (
                         <div className={styles.roundsContainer}>
                             <div className={styles.roundsHeader}>
-                                <div className={styles.statLabel}>Rounds</div>
-                                <div className={styles.roundCount}>{currentEvent.rounds.length} Rounds</div>
+                                <div className={styles.statLabel}>
+                                    {category === 'workshops' ? 'Agenda' : category === 'papers' ? 'Rules' : 'Rounds'}
+                                </div>
+                                <div className={styles.roundCount}>{currentEvent.rounds.length} {
+                                    category === 'workshops' ? 'Items' : category === 'papers' ? 'Rules' : 'Rounds'
+                                }</div>
                             </div>
                             {currentEvent.rounds.map((round, index) => (
                                 <div key={round._id?.$oid || index} className={styles.roundItem}>
@@ -715,7 +572,9 @@ export default function EventShowcase({ sounds }) {
                                 {/* Rounds */}
                                 {currentEvent.rounds && currentEvent.rounds.length > 0 && (
                                     <div className={styles.modalRounds}>
-                                        <h4 className={styles.modalSectionTitle}>Rounds</h4>
+                                        <h4 className={styles.modalSectionTitle}>
+                                            {category === 'workshops' ? 'Agenda' : category === 'papers' ? 'Rules' : 'Rounds'}
+                                        </h4>
                                         {currentEvent.rounds.map((round, index) => (
                                             <div key={round._id?.$oid || index} className={styles.modalRoundItem}>
                                                 <span className={styles.roundNumber}>{index + 1}</span>
