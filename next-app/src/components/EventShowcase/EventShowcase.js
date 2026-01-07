@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { eventService } from '@/services/eventservice';
@@ -6,7 +7,7 @@ import { eventsData, workshopsData, papersData } from '@/data/eventsData';
 import { CometCard } from '@/components/ui/comet-card';
 import styles from './EventShowcase.module.css';
 
-export default function EventShowcase({ sounds }) {
+export default function EventShowcase({ sounds, initialEventId }) {
     const { isAuthenticated, user } = useAuth();
     const [category, setCategory] = useState('events');
     const [events, setEvents] = useState([]);
@@ -16,6 +17,44 @@ export default function EventShowcase({ sounds }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const [hasInitialSet, setHasInitialSet] = useState(false); // Track if initial event is set
+    const [isMobile, setIsMobile] = useState(false); // Track mobile view
+
+    // Detect mobile screen
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Handle initialEventId to set correct category
+    useEffect(() => {
+        if (initialEventId && !hasInitialSet) {
+            console.log("Deep linking to event:", initialEventId);
+            // Check all data sources for the initialEventId
+            let targetEvent = eventsData.find(e => e.eventId === initialEventId);
+            let targetCat = 'events';
+
+            if (!targetEvent) {
+                targetEvent = workshopsData.find(w => w.workshopId === initialEventId);
+                if (targetEvent) targetCat = 'workshops';
+            }
+            if (!targetEvent) {
+                targetEvent = papersData.find(p => p.paperId === initialEventId);
+                if (targetEvent) targetCat = 'papers';
+            }
+
+            if (targetEvent) {
+                console.log("Found event category for initialEventId:", targetCat);
+                if (category !== targetCat) {
+                    setCategory(targetCat);
+                }
+            } else {
+                console.warn("Event ID not found in local data:", initialEventId);
+            }
+        }
+    }, [initialEventId, hasInitialSet, category]); // Added category to dependencies to prevent infinite loop if category is already correct
 
     // Debug mount/unmount
     useEffect(() => {
@@ -32,14 +71,10 @@ export default function EventShowcase({ sounds }) {
             try {
                 let items = [];
                 if (category === 'events') {
-                    console.log('📋 Using eventsData, count:', eventsData.length);
-                    // Use hardcoded eventsData
                     items = eventsData
                         .filter(e => !e.eventName.toLowerCase().includes('thooral'))
                         .map(e => ({ ...e, isFullDetailsLoaded: true }));
                 } else if (category === 'workshops') {
-                    console.log('📋 Using workshopsData, count:', workshopsData.length);
-                    // Use hardcoded workshopsData
                     items = workshopsData.map(w => ({
                         ...w,
                         eventName: w.workshopName,
@@ -47,10 +82,9 @@ export default function EventShowcase({ sounds }) {
                         timing: w.time,
                         isWorkshop: true,
                         isFullDetailsLoaded: true,
-                        teamSize: w.teamSize || 1, // Default to 1 (Individual) if not specified
-                        // Fix date format (MongoDB extended JSON)
+                        // Ensure required fields like teamSize and date are present
+                        teamSize: w.teamSize || 1,
                         date: w.date?.$date || w.date,
-                        // Map agenda to rounds for display
                         rounds: w.agenda ? w.agenda.map((a, i) => ({
                             title: a.time,
                             description: a.description,
@@ -58,8 +92,6 @@ export default function EventShowcase({ sounds }) {
                         })) : []
                     }));
                 } else if (category === 'papers') {
-                    console.log('📋 Using papersData, count:', papersData.length);
-                    // Use hardcoded papersData
                     items = papersData.map(p => ({
                         ...p,
                         eventName: p.eventName || "Paper Presentation",
@@ -67,19 +99,55 @@ export default function EventShowcase({ sounds }) {
                         timing: p.time,
                         isPaper: true,
                         isFullDetailsLoaded: true,
-                        // Fix date format (MongoDB extended JSON)
+                        // Ensure required fields
                         date: p.date?.$date || p.date,
-                        // Map rules to rounds for display
                         rounds: p.rules ? p.rules.split('\n').map((rule, i) => ({
-                            title: `Rule ${i + 1}`,
+                            title: `Rule ${i + 1} `,
                             description: rule,
-                            _id: `rule-${i}`
+                            _id: `rule - ${i} `
                         })) : []
                     }));
                 }
-                console.log('✅ Setting events:', items.length, 'First item:', items[0]?.eventName);
+
+                console.log('✅ Setting events:', items.length);
                 setEvents(items);
-                setActiveEventIndex(0);
+
+                // Deep Linking Logic
+                if (initialEventId && !hasInitialSet) {
+                    const idx = items.findIndex(e =>
+                        (e.eventId === initialEventId) ||
+                        (e.workshopId === initialEventId) ||
+                        (e.paperId === initialEventId)
+                    );
+
+                    if (idx !== -1) {
+                        console.log("🎯 Found initial event at index:", idx);
+                        setActiveEventIndex(idx);
+                        setHasInitialSet(true);
+                    } else {
+                        // Crucial: check if we are in the *wrong* category for this ID.
+                        // If we are, do nothing and wait for the category switch effect.
+                        // If we are in the *correct* category but item is missing, then fallback.
+
+                        // Determine expected category for current ID
+                        let expectedCategory = 'events';
+                        if (workshopsData.some(w => w.workshopId === initialEventId)) expectedCategory = 'workshops';
+                        else if (papersData.some(p => p.paperId === initialEventId)) expectedCategory = 'papers';
+
+                        if (category !== expectedCategory) {
+                            console.log(`⏳ Waiting for category switch to ${expectedCategory}...`);
+                        } else {
+                            // Correct category but ID not found? Maybe invalid ID.
+                            console.warn("⚠️ Initial event ID not found in its expected category:", category);
+                            // Fallback to 0 if we really can't find it.
+                            if (items.length > 0) setActiveEventIndex(0);
+                        }
+                    }
+                } else if (!hasInitialSet) {
+                    // No deep link, normal load
+                    setActiveEventIndex(0);
+                }
+
             } catch (error) {
                 console.error(`Failed to load ${category}`, error);
             } finally {
@@ -87,7 +155,7 @@ export default function EventShowcase({ sounds }) {
             }
         };
         loadEvents();
-    }, [category]);
+    }, [category, initialEventId, hasInitialSet]); // Added initialEventId and hasInitialSet dependencies
 
     // Fetch full details - No longer needed as all data is hardcoded
     useEffect(() => {
@@ -174,12 +242,12 @@ export default function EventShowcase({ sounds }) {
     };
 
 
-    const [notification, setNotification] = useState({ 
-        isOpen: false, 
+    const [notification, setNotification] = useState({
+        isOpen: false,
         type: '', // 'confirm', 'success', 'error'
-        title: '', 
-        message: '', 
-        onConfirm: null 
+        title: '',
+        message: '',
+        onConfirm: null
     });
 
     const closeNotification = () => {
@@ -188,33 +256,33 @@ export default function EventShowcase({ sounds }) {
     };
 
     const handleRegisterClick = () => {
-         if (sounds?.click) sounds.click.play();
+        if (sounds?.click) sounds.click.play();
 
         const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 
         if (!isAuthenticated && !token) {
-             setNotification({
-                 isOpen: true,
-                 type: 'error',
-                 title: 'Login Required',
-                 message: 'Please login to register for this event.',
-                 onConfirm: () => closeNotification()
-             });
-             return;
+            setNotification({
+                isOpen: true,
+                type: 'error',
+                title: 'Login Required',
+                message: 'Please login to register for this event.',
+                onConfirm: () => closeNotification()
+            });
+            return;
         }
 
         setNotification({
             isOpen: true,
             type: 'confirm',
             title: 'Confirm Registration',
-            message: `Are you sure you want to register for ${currentEvent.eventName}?`,
+            message: `Are you sure you want to register for ${currentEvent.eventName} ? `,
             onConfirm: () => performRegistration()
         });
     };
 
     const performRegistration = async () => {
         closeNotification();
-        
+
         try {
             let res;
             if (category === 'events') {
@@ -233,20 +301,20 @@ export default function EventShowcase({ sounds }) {
                     message: res.message || "Registered successfully!",
                     onConfirm: () => closeNotification()
                 });
-                
+
                 // Update local status
                 setEvents(prev => {
                     const newEvents = [...prev];
                     if (newEvents[activeEventIndex]) {
-                        newEvents[activeEventIndex] = { 
-                            ...newEvents[activeEventIndex], 
-                            isRegistered: true 
+                        newEvents[activeEventIndex] = {
+                            ...newEvents[activeEventIndex],
+                            isRegistered: true
                         };
                     }
                     return newEvents;
                 });
             } else {
-                 setNotification({
+                setNotification({
                     isOpen: true,
                     type: 'error',
                     title: 'Registration Failed',
@@ -257,7 +325,7 @@ export default function EventShowcase({ sounds }) {
         } catch (error) {
             console.error("Registration error:", error);
             const msg = error.response?.data?.message || "An error occurred during registration.";
-            
+
             if (error.response?.status === 401) {
                 setNotification({
                     isOpen: true,
@@ -308,7 +376,7 @@ export default function EventShowcase({ sounds }) {
     const renderDropdown = () => (
         <div className={styles.categoryDropdown} ref={dropdownRef}>
             <div
-                className={`${styles.dropdownToggle} ${isDropdownOpen ? styles.active : ''}`}
+                className={`${styles.dropdownToggle} ${isDropdownOpen ? styles.active : ''} `}
                 onClick={() => {
                     if (sounds?.click) sounds.click.play();
                     setIsDropdownOpen(!isDropdownOpen);
@@ -317,11 +385,11 @@ export default function EventShowcase({ sounds }) {
                 <span>{currentCategoryLabel}</span>
                 <span className={styles.dropdownArrow}>▼</span>
             </div>
-            <div className={`${styles.dropdownMenu} ${isDropdownOpen ? styles.show : ''}`}>
+            <div className={`${styles.dropdownMenu} ${isDropdownOpen ? styles.show : ''} `}>
                 {Object.keys(categoryLabels).map((cat) => (
                     <div
                         key={cat}
-                        className={`${styles.dropdownItem} ${category === cat ? styles.selected : ''}`}
+                        className={`${styles.dropdownItem} ${category === cat ? styles.selected : ''} `}
                         onClick={(e) => {
                             e.stopPropagation();
                             console.log('🖱️ Dropdown item clicked:', cat);
@@ -351,10 +419,10 @@ export default function EventShowcase({ sounds }) {
     return (
         <div className={styles.showcase}>
             <div className={styles.controlsContainer}>
-                {renderDropdown()}
+                {!isMobile && renderDropdown()}
 
                 {/* Register Button */}
-                <button className={styles.registerButton} onClick={handleRegister}>
+                <button className={styles.registerButton} onClick={handleRegisterClick}>
                     <span>Register Now</span>
                 </button>
             </div>
@@ -366,7 +434,7 @@ export default function EventShowcase({ sounds }) {
                         <span className={styles.bracketCorner}></span>
                         <span className={styles.bracketCorner}></span>
                     </div>
-                    <h1 className={`${styles.eventName} ${isTransitioning ? styles.fadeOut : styles.fadeIn}`}>
+                    <h1 className={`${styles.eventName} ${isTransitioning ? styles.fadeOut : styles.fadeIn} `}>
                         {currentEvent.eventName}
                     </h1>
                     <div className={styles.bracket}>
@@ -376,7 +444,7 @@ export default function EventShowcase({ sounds }) {
                 </div>
 
                 {/* Tagline */}
-                <p className={`${styles.tagline} ${isTransitioning ? styles.fadeOut : styles.fadeIn}`}>
+                <p className={`${styles.tagline} ${isTransitioning ? styles.fadeOut : styles.fadeIn} `}>
                     {currentEvent.oneLineDescription}
                 </p>
             </div>
@@ -414,7 +482,7 @@ export default function EventShowcase({ sounds }) {
                             {events.map((_, index) => (
                                 <span
                                     key={index}
-                                    className={`${styles.swipeDot} ${index === activeEventIndex ? styles.activeDot : ''}`}
+                                    className={`${styles.swipeDot} ${index === activeEventIndex ? styles.activeDot : ''} `}
                                 ></span>
                             ))}
                         </div>
@@ -423,14 +491,14 @@ export default function EventShowcase({ sounds }) {
                         {events.length > 1 && (
                             <>
                                 <button
-                                    className={`${styles.navArrow} ${styles.navLeft}`}
+                                    className={`${styles.navArrow} ${styles.navLeft} `}
                                     onClick={() => handleEventChange('prev')}
                                     aria-label="Previous event"
                                 >
                                     ◀
                                 </button>
                                 <button
-                                    className={`${styles.navArrow} ${styles.navRight}`}
+                                    className={`${styles.navArrow} ${styles.navRight} `}
                                     onClick={() => handleEventChange('next')}
                                     aria-label="Next event"
                                 >
@@ -440,7 +508,7 @@ export default function EventShowcase({ sounds }) {
                         )}
 
                         <CometCard className={styles.eventImageCard}>
-                            <div className={`${styles.eventImage} ${isTransitioning ? styles.fadeOut : styles.fadeIn}`} onClick={openModal} style={{ cursor: 'pointer' }}>
+                            <div className={`${styles.eventImage} ${isTransitioning ? styles.fadeOut : styles.fadeIn} `} onClick={openModal} style={{ cursor: 'pointer' }}>
                                 {currentEvent.image && (
                                     <Image
                                         src={currentEvent.image}
@@ -507,7 +575,7 @@ export default function EventShowcase({ sounds }) {
             </div>
 
             {/* Event Description Removed as per user request */}
-            {/* <div className={`${styles.eventDescription} ${isTransitioning ? styles.fadeOut : styles.fadeIn}`}>
+            {/* <div className={`${ styles.eventDescription } ${ isTransitioning ? styles.fadeOut : styles.fadeIn } `}>
                 <p>{currentEvent.description}</p>
             </div> */}
 
@@ -594,7 +662,7 @@ export default function EventShowcase({ sounds }) {
                                         {currentEvent.contacts.map((contact, index) => (
                                             <div key={contact._id?.$oid || index} className={styles.modalContactItem}>
                                                 <span>{contact.name}</span>
-                                                <a href={`tel:${contact.mobile}`}>{contact.mobile}</a>
+                                                <a href={`tel:${contact.mobile} `}>{contact.mobile}</a>
                                             </div>
                                         ))}
                                     </div>
@@ -603,10 +671,10 @@ export default function EventShowcase({ sounds }) {
                                 <button
                                     className={styles.registerBtn}
                                     onClick={!currentEvent.isRegistered ? handleRegisterClick : undefined}
-                                     style={{
+                                    style={{
                                         opacity: currentEvent.isRegistered ? 0.7 : 1,
                                         cursor: currentEvent.isRegistered ? 'default' : 'pointer',
-                                         background: currentEvent.isRegistered ? 'rgba(0, 255, 0, 0.2)' : undefined,
+                                        background: currentEvent.isRegistered ? 'rgba(0, 255, 0, 0.2)' : undefined,
                                         borderColor: currentEvent.isRegistered ? '#00ff00' : undefined,
                                     }}
                                 >
@@ -618,10 +686,10 @@ export default function EventShowcase({ sounds }) {
                     </div>
                 </div>
             )}
-            
+
             {/* Notification Modal */}
-             {notification.isOpen && (
-                <div 
+            {notification.isOpen && (
+                <div
                     style={{
                         position: 'fixed',
                         top: 0,
@@ -636,7 +704,7 @@ export default function EventShowcase({ sounds }) {
                         backdropFilter: 'blur(5px)'
                     }}
                     onClick={(e) => {
-                         if (e.target === e.currentTarget && notification.type !== 'confirm') closeNotification();
+                        if (e.target === e.currentTarget && notification.type !== 'confirm') closeNotification();
                     }}
                 >
                     <div style={{
@@ -657,42 +725,42 @@ export default function EventShowcase({ sounds }) {
                             justifyContent: 'space-between',
                             alignItems: 'center'
                         }}>
-                             <h3 style={{ 
-                                 color: notification.type === 'error' ? '#ff3366' : 
-                                        notification.type === 'success' ? '#00ff00' : '#e04e94',
-                                 margin: 0,
-                                 fontSize: '1.2rem',
-                                 textTransform: 'uppercase',
-                                 letterSpacing: '0.05em'
-                             }}>
-                                 {notification.title}
-                             </h3>
-                             <button 
-                                 onClick={closeNotification}
-                                 style={{
-                                     background: 'none',
-                                     border: 'none',
-                                     color: 'rgba(255,255,255,0.6)',
-                                     fontSize: '1.5rem',
-                                     cursor: 'pointer'
-                                 }}
-                             >
-                                 ✕
-                             </button>
+                            <h3 style={{
+                                color: notification.type === 'error' ? '#ff3366' :
+                                    notification.type === 'success' ? '#00ff00' : '#e04e94',
+                                margin: 0,
+                                fontSize: '1.2rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em'
+                            }}>
+                                {notification.title}
+                            </h3>
+                            <button
+                                onClick={closeNotification}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'rgba(255,255,255,0.6)',
+                                    fontSize: '1.5rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
                         <div style={{ padding: '25px', color: '#ddd', fontSize: '1rem', lineHeight: '1.5' }}>
                             {notification.message}
                         </div>
                         <div style={{
-                             padding: '20px 25px',
-                             background: 'rgba(0,0,0,0.2)',
-                             display: 'flex',
-                             justifyContent: 'flex-end',
-                             gap: '15px'
+                            padding: '20px 25px',
+                            background: 'rgba(0,0,0,0.2)',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '15px'
                         }}>
                             {notification.type === 'confirm' ? (
                                 <>
-                                    <button 
+                                    <button
                                         onClick={closeNotification}
                                         style={{
                                             padding: '8px 20px',
@@ -707,7 +775,7 @@ export default function EventShowcase({ sounds }) {
                                     >
                                         Cancel
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={notification.onConfirm}
                                         style={{
                                             padding: '8px 24px',
@@ -725,9 +793,9 @@ export default function EventShowcase({ sounds }) {
                                     </button>
                                 </>
                             ) : (
-                                <button 
+                                <button
                                     onClick={closeNotification}
-                                     style={{
+                                    style={{
                                         padding: '8px 24px',
                                         background: 'rgba(199, 32, 113, 0.2)',
                                         border: '1px solid #e04e94',
