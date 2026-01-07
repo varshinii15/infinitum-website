@@ -29,9 +29,9 @@ export const eventsData = [
         "hall": "Q Block Classroom",
         "eventRules": "Participants must follow organiser instructions and maintain sportsmanship throughout the event.",
         "teamSize": 4,
-        "date": { "$date": "2026-02-13T10:30:00.000Z" },
+        "date": { "$date": "2026-02-01T09:00:00.000Z" },
         "closed": false,
-        "timing": "10:30 AM - 4:00 PM",
+        "timing": "To be announced",
         "youtubeUrl": "",
         "createdAt": { "$date": "2025-12-25T07:37:40.909Z" },
         "updatedAt": { "$date": "2025-12-25T07:37:40.909Z" },
@@ -60,11 +60,11 @@ export const eventsData = [
             { "name": "Pravith", "mobile": "9843243610", "_id": { "$oid": "694ce9d2297836cde768248b" } }
         ],
         "hall": "AIR Lab",
-        "eventRules": "Time limit is 2 hours. Participants must follow organiser instructions. Any cheating leads to disqualification. Points are awarded based on accuracy, creativity, and timely completion. Organisers’ decisions are final.",
+        "eventRules": "Time limit is 2 hours. Participants must follow organiser instructions. Any cheating leads to disqualification. Points are awarded based on accuracy, creativity, and timely completion. Organisers' decisions are final.",
         "teamSize": 3,
-        "date": { "$date": "2026-02-14T09:00:00.000Z" },
+        "date": { "$date": "2026-02-01T09:00:00.000Z" },
         "closed": false,
-        "timing": "9:00 AM - 3:00 PM",
+        "timing": "2 Hours",
         "youtubeUrl": "",
         "createdAt": { "$date": "2025-12-25T07:37:54.049Z" },
         "updatedAt": { "$date": "2025-12-25T07:37:54.049Z" },
@@ -82,7 +82,7 @@ export const eventsData = [
         "club_id": { "$oid": "69495a6a719d1b3bd5a9e7cf" },
         "rounds": [
             {
-                "title": "Round 1 – Code Charades (The Droid’s Transmission)",
+                "title": "Round 1 – Code Charades (The Droid's Transmission)",
                 "tagline": "Act fast, decode signals, earn your advantage.",
                 "description": "Participants act out computer science-related terms using gestures only, with added constraints from Bug Cards. Points earned convert into strategic advantages for the next round.",
                 "_id": { "$oid": "694cec9c297836cde7682491" }
@@ -101,9 +101,9 @@ export const eventsData = [
         "hall": "G Block Classroom",
         "eventRules": "Teams must follow organiser instructions. Judging is based on accuracy, time, creativity, team synergy, and effective use of advantages. Organisers' decisions are final.",
         "teamSize": 4,
-        "date": { "$date": "2026-02-14T09:00:00.000Z" },
+        "date": { "$date": "2026-02-01T09:00:00.000Z" },
         "closed": false,
-        "timing": "9:00 AM - 2:00 PM",
+        "timing": "To be announced",
         "youtubeUrl": "",
         "createdAt": { "$date": "2025-12-25T07:49:48.371Z" },
         "updatedAt": { "$date": "2025-12-25T07:49:48.371Z" },
@@ -138,11 +138,11 @@ export const eventsData = [
             { "name": "A T Abbilaash", "mobile": "8667093591", "_id": { "$oid": "694ceca6297836cde768249d" } }
         ],
         "hall": "AIR Lab",
-        "eventRules": "Cheating is prohibited. Points are awarded for successful hacks and reduced for failed hacks or broken defenses. Final scores are calculated using aggregate performance across both rounds. Organisers’ decisions are final.",
+        "eventRules": "Cheating is prohibited. Points are awarded for successful hacks and reduced for failed hacks or broken defenses. Final scores are calculated using aggregate performance across both rounds. Organisers' decisions are final.",
         "teamSize": 2,
-        "date": { "$date": "2026-02-13T10:00:00.000Z" },
+        "date": { "$date": "2026-02-01T09:00:00.000Z" },
         "closed": false,
-        "timing": "10:00 AM - 3:00 PM",
+        "timing": "To be announced",
         "youtubeUrl": "",
         "createdAt": { "$date": "2025-12-25T07:49:58.495Z" },
         "updatedAt": { "$date": "2025-12-25T07:49:58.495Z" },
@@ -179,10 +179,6 @@ export const eventsData = [
             }
         ],
         "teamSize": 3,
-        "hall": "Seminar Hall",
-        "date": { "$date": "2026-02-13T16:30:00.000Z" },
-        "closed": false,
-        "timing": "4:30 PM - 5:15 PM",
         "image": "/images/events/paper_presentation.png"
     },
 
@@ -209,10 +205,6 @@ export const eventsData = [
             }
         ],
         "teamSize": 1,
-        "hall": "Computer Lab",
-        "date": { "$date": "2026-02-14T09:00:00.000Z" },
-        "closed": false,
-        "timing": "9:00 AM - 3:00 PM",
         "image": "/images/events/paper_presentation.png"
     },
 
@@ -251,13 +243,140 @@ export const eventsData = [
             }
         ],
         "teamSize": 4,
-        "hall": "Innovation Center",
-        "date": { "$date": "2026-02-13T10:00:00.000Z" },
-        "closed": false,
-        "timing": "Day 1: 10:00 AM - 4:00 PM, Day 2: 9:00 AM - 3:00 PM",
         "image": "/images/events/paper_presentation.png"
     }
 ]
+
+
+// Hardcoded workshops data
+export const workshopsData = [
+    {
+        "workshopId": "WS01",
+        "alteredFee": 400,
+        "actualFee": 500,
+        "club_id": {
+            "$oid": "69495a6a719d1b3bd5a9e7cd"
+        },
+        "workshopName": "Introduction to Machine Learning",
+        "date": {
+            "$date": "2026-03-15T00:00:00.000Z"
+        },
+        "tagline": "Learn ML fundamentals hands-on",
+        "hall": "Computer Lab 1",
+        "time": "2:00 PM - 5:00 PM",
+        "contacts": [
+            {
+                "name": "John Doe",
+                "mobile": "9876543210",
+                "_id": {
+                    "$oid": "695a4c2a8baa56af3270689b"
+                }
+            },
+            {
+                "name": "Jane Smith",
+                "mobile": "9123456780",
+                "_id": {
+                    "$oid": "695a4c2a8baa56af3270689c"
+                }
+            }
+        ],
+        "maxCount": 50,
+        "description": "A comprehensive workshop covering the basics of Machine Learning, including supervised and unsupervised learning, neural networks, and practical implementations using Python.",
+        "agenda": [
+            {
+                "time": "2:00 PM - 2:30 PM",
+                "description": "Introduction to ML concepts",
+                "_id": {
+                    "$oid": "695a4c2a8baa56af3270689d"
+                }
+            },
+            {
+                "time": "2:30 PM - 3:30 PM",
+                "description": "Hands-on: Linear Regression",
+                "_id": {
+                    "$oid": "695a4c2a8baa56af3270689e"
+                }
+            },
+            {
+                "time": "3:30 PM - 4:30 PM",
+                "description": "Neural Networks basics",
+                "_id": {
+                    "$oid": "695a4c2a8baa56af3270689f"
+                }
+            },
+            {
+                "time": "4:30 PM - 5:00 PM",
+                "description": "Q&A and Closing",
+                "_id": {
+                    "$oid": "695a4c2a8baa56af327068a0"
+                }
+            }
+        ],
+        "earlyBirdActive": true,
+        "closed": false,
+        "prerequisites": "Basic Python knowledge, Laptop with Python 3.8+ installed",
+        "youtubeUrl": "https://youtube.com/watch?v=example",
+        "createdAt": {
+            "$date": "2026-01-04T11:16:58.576Z"
+        },
+        "updatedAt": {
+            "$date": "2026-01-04T11:16:58.576Z"
+        },
+        "__v": 0,
+        "image": "/images/circadian-algorithm.jpg"
+    }
+];
+
+// Hardcoded papers data
+export const papersData = [
+    {
+        "paperId": "PRP03",
+        "eventName": "AI and Machine Learning Research Symposium",
+        "contacts": [
+            {
+                "name": "Dr. John Smith",
+                "mobile": "9876543210",
+                "_id": {
+                    "$oid": "695a5069f567faee30248bfe"
+                }
+            },
+            {
+                "name": "Dr. Sarah Johnson",
+                "mobile": "9876543211",
+                "_id": {
+                    "$oid": "695a5069f567faee30248bff"
+                }
+            }
+        ],
+        "eventMail": "ai.symposium@psgtech.ac.in",
+        "theme": "Artificial Intelligence",
+        "tagline": "Explore the Future of AI and ML",
+        "topic": "Recent advances in deep learning, neural networks, and AI applications in real-world scenarios",
+        "rules": "1. Each team must submit an abstract by the deadline\n2. Maximum team size is 3 members\n3. Presentation duration: 15 minutes\n4. Q&A session: 5 minutes",
+        "date": {
+            "$date": "2026-02-15T00:00:00.000Z"
+        },
+        "time": "10:00 AM - 5:00 PM",
+        "deadline": {
+            "$date": "2026-02-01T00:00:00.000Z"
+        },
+        "teamSize": 3,
+        "hall": "Seminar Hall A",
+        "closed": false,
+        "youtubeUrl": "https://www.youtube.com/watch?v=example",
+        "club_id": {
+            "$oid": "69495a6a719d1b3bd5a9e7cd"
+        },
+        "createdAt": {
+            "$date": "2026-01-04T11:35:05.079Z"
+        },
+        "updatedAt": {
+            "$date": "2026-01-04T11:35:05.079Z"
+        },
+        "__v": 0,
+        "image": "/images/events/paper_presentation.png"
+    }
+];
 
 
 // Group events by category

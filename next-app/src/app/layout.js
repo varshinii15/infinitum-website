@@ -29,12 +29,15 @@ export const metadata = {
     title: "Infinitum",
     description: "Computer Science Association Presents Infinitum",
   },
-  themeColor: "#000000",
   appleWebApp: {
     capable: true,
     title: "Infinitum",
     statusBarStyle: "#000000",
   },
+};
+
+export const viewport = {
+  themeColor: "#000000",
 };
 
 import StylesProvider from "@/components/ThemeRegistry";
