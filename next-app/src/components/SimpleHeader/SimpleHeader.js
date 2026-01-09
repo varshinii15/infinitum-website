@@ -37,6 +37,20 @@ export default function SimpleHeader() {
                         className={styles.orgLogo}
                     />
                     <Image
+                        src="/images/github.png"
+                        alt="GHCC Logo"
+                        height={40}
+                        width={40}
+                        className={styles.orgLogo}
+                    />
+                    <Image
+                        src="/images/eye.png"
+                        alt="The Eye Logo"
+                        height={40}
+                        width={40}
+                        className={styles.orgLogo}
+                    />
+                    <Image
                         src="/images/Year75w.png"
                         alt="Year 75 Logo"
                         width={40}

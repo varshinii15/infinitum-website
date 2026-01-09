@@ -258,6 +258,50 @@ class AboutPage extends React.Component {
                                     </div>
                                 </div>
                             </div>
+                            
+                            {/* GHCC and The Eye Section */}
+                            <div className={classes.section}>
+                                <div className={classes.sectionWrapper}>
+                                    <div className={classes.sectionContent}>
+                                        <Text className={classes.sectionTitle}>GHCC and The Eye</Text>
+                                        <Text className={classes.sectionText}>
+                                            The <span className={classes.highlight}>GitHub Campus Club (GHCC)</span> is an affiliated club under the
+                                            Computer Science and Engineering Association (CSEA) that focuses on software development,
+                                            open-source contributions, and GitHub-based collaboration. The club encourages students to
+                                            enhance their coding skills, version control practices, and real-world development experience
+                                            through hands-on projects and community-driven learning.
+                                        </Text>
+                                        <Text className={classes.sectionText}>
+                                            <span className={classes.highlight}>The Eye</span> is an affiliated club under the Computer Science
+                                            and Engineering Association (CSEA) dedicated to Cybersecurity and Artificial Intelligence.
+                                            The club aims to build awareness and technical expertise in secure systems, ethical hacking,
+                                            and AI-driven solutions through workshops, events, and practical initiatives.
+                                        </Text>
+                                        <Text className={classes.sectionText}>
+                                            Together, GHCC and The Eye promote innovation, technical excellence, and industry-relevant
+                                            skill development among students.
+                                        </Text>
+                                    </div>
+                                    <div className={classes.sectionImageContainer} style={{ display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                        <Image
+                                            src="/images/github.png"
+                                            alt="GitHub Campus Club Logo"
+                                            width={120}
+                                            height={120}
+                                            className={classes.sectionImage}
+                                            style={{ objectFit: 'contain' }}
+                                        />
+                                        <Image
+                                            src="/images/eye.png"
+                                            alt="The Eye Logo"
+                                            width={120}
+                                            height={120}
+                                            className={classes.sectionImage}
+                                            style={{ objectFit: 'contain' }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* Infinitum Section */}
                             <div className={classes.section}>
@@ -302,6 +346,7 @@ class AboutPage extends React.Component {
                                     </div>
                                 </div>
                             </div>
+
                         </Secuence>
                     </div>
                 </Fader>
