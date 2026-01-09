@@ -64,25 +64,25 @@ export const authService = {
 
     // Pre-registration - Send verification code to email
     sendPreRegistrationCode: async (email) => {
-        const response = await api.post('/inf/api/events/preregister', { email });
+        const response = await api.post('/api/events/preregister', { email });
         return response.data;
     },
 
     // Pre-registration - Verify the code and complete pre-registration
     verifyPreRegistration: async (email, verificationCode) => {
-        const response = await api.post('/inf/api/events/preregister/verify', { email, verificationCode });
+        const response = await api.post('/api/events/preregister/verify', { email, verificationCode });
         return response.data;
     },
 
     // Pre-registration - Check status
     checkPreRegistration: async (email) => {
-        const response = await api.get(`/inf/api/events/preregister/check?email=${encodeURIComponent(email)}`);
+        const response = await api.get(`/api/events/preregister/check?email=${encodeURIComponent(email)}`);
         return response.data;
     },
 
     // Pre-registration - Resend verification code
     resendPreRegistrationCode: async (email) => {
-        const response = await api.post('/inf/api/events/preregister/resend', { email });
+        const response = await api.post('/api/events/preregister/resend', { email });
         return response.data;
     },
 };
