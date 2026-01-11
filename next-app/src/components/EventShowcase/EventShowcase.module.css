@@ -976,16 +976,16 @@
 .swipeDot {
   width: 6px;
   height: 6px;
-  background-color: rgba(255, 215, 0, 0.3);
-  /* Transparent Gold */
+  background-color: rgba(150, 150, 150, 0.4);
+  /* Transparent Grey */
   border-radius: 50%;
   transition: all 0.3s ease;
 }
 
 .activeDot {
-  background-color: #FFD700;
-  /* Gold Theme */
-  box-shadow: 0 0 8px #FFD700;
+  background-color: #c72071;
+  /* Pink Theme */
+  box-shadow: 0 0 8px rgba(199, 32, 113, 0.6);
   width: 24px;
   border-radius: 4px;
 }
@@ -1291,7 +1291,7 @@
 
   .platform {
     width: 240px;
-    bottom: 10px;
+    bottom: -10px;
     /* Adjust platform to be just below image, above controls */
   }
 
