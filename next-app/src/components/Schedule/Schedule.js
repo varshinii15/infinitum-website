@@ -20,18 +20,18 @@ const RAW_EVENTS = [
     { title: 'Inauguration', start: '09:00', end: '10:00', category: 'general', day: 'day1', venue: 'D Block' },
 
     { title: 'Thooral – Hackathon', start: '10:00', end: '16:30', category: 'flagship', day: 'day1', venue: 'CC Lab' },
-    { title: 'Force Coders', start: '10:00', end: '16:00', category: 'competition', day: 'day1', venue: 'GRD and Programming Labs' },
-    { title: 'Quest X', start: '10:00', end: '15:00', category: 'competition', day: 'day1', venue: 'Q Block Classrooms' },
+    { title: 'Force Coders', start: '10:00', end: '16:00', category: 'competition', type: 'tech', day: 'day1', venue: 'GRD and Programming Labs' },
+    { title: 'Quest X', start: '10:00', end: '15:00', category: 'competition', type: 'nontech', day: 'day1', venue: 'Q Block Classrooms' },
     { title: 'Workshop 1', start: '10:00', end: '16:00', category: 'workshop', day: 'day1', venue: 'SCPS Lab' },
     { title: 'Open Quiz', start: '13:45', end: '16:00', category: 'quiz', day: 'day1', venue: 'D Block' },
     { title: 'Award Ceremony I', start: '16:30', end: '17:15', category: 'awards', day: 'day1', venue: 'F203' },
 
     // Day 2
-    { title: 'Code Mania', start: '09:00', end: '15:00', category: 'competition', day: 'day2', venue: '3AI and AIR Labs' },
+    { title: 'Code Mania', start: '09:00', end: '15:00', category: 'competition', type: 'tech', day: 'day2', venue: '3AI and AIR Labs' },
     { title: 'Paper Presentation on AI and Emerging Trends', start: '10:00', end: '14:00', category: 'presentation', day: 'day2', venue: 'Classroom' },
     { title: 'Thooral – Hackathon', start: '09:00', end: '15:00', category: 'flagship', day: 'day2', venue: 'CC Lab' },
-    { title: 'Nexus', start: '09:00', end: '15:00', category: 'competition', day: 'day2', venue: '3AI and CSP Labs' },
-    { title: 'Git Wars', start: '09:00', end: '14:00', category: 'competition', day: 'day2', venue: 'G Block Classrooms' },
+    { title: 'Nexus', start: '09:00', end: '15:00', category: 'competition', type: 'tech', day: 'day2', venue: '3AI and CSP Labs' },
+    { title: 'Git Wars', start: '09:00', end: '14:00', category: 'competition', type: 'nontech', day: 'day2', venue: 'G Block Classrooms' },
     { title: 'Workshop 2', start: '09:00', end: '15:00', category: 'workshop', day: 'day2', venue: 'AIR Lab' },
     { title: 'Workshop 3', start: '09:00', end: '15:00', category: 'workshop', day: 'day2', venue: 'SCPS Lab' },
     { title: 'Award Ceremony II', start: '15:30', end: '16:00', category: 'awards', day: 'day2', venue: 'F203' }
@@ -326,6 +326,7 @@ const Schedule = ({ classes, sounds }) => {
 
                                                         {/* Custom Tooltip */}
                                                         <div className={classes.eventTooltip}>
+                                                            {event.type && <div className={classes.tooltipCategory}>{event.type === 'tech' ? 'Technical' : 'Non-Technical'}</div>}
                                                             <div className={classes.tooltipTitle}>
                                                                 {event.title}
                                                                 {isRegistered && ' ✓'}
@@ -382,6 +383,7 @@ const Schedule = ({ classes, sounds }) => {
                                                     {event.title}
                                                     {isRegistered && <span className={classes.registeredBadge}><span>✓</span><span>REGISTERED</span></span>}
                                                 </div>
+                                                {event.type && <div className={classes.mobileEventCategory}>{event.type === 'tech' ? 'Technical' : 'Non-Technical'}</div>}
                                             </div>
                                             <div className={classes.mobileEventTime}>
                                                 {formatTime(event.start)} - {formatTime(event.end)}

@@ -319,6 +319,15 @@ export const styles = theme => ({
       borderColor: `${rgba(theme.color.secondary.main, 0.5)} transparent transparent transparent`
     }
   },
+  tooltipCategory: {
+    fontSize: '0.65rem',
+    fontWeight: 700,
+    color: theme.color.secondary.main,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    marginBottom: 4,
+    fontFamily: theme.typography.secondary
+  },
   tooltipTitle: {
     fontSize: '0.9rem',
     fontWeight: 700,
@@ -398,13 +407,13 @@ export const styles = theme => ({
     position: 'absolute',
     right: 3,
     top: 3,
-    fontSize: '0.6rem',
-    fontWeight: 700,
+    fontSize: '0.65rem',
+    fontWeight: 900,
     color: '#000',
     borderRadius: 3,
-    padding: '2px 4px',
+    padding: '2px 6px',
     textAlign: 'center',
-    letterSpacing: '0.05em',
+    letterSpacing: '0.08em',
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
     display: 'flex',
@@ -519,6 +528,15 @@ export const styles = theme => ({
     textShadow: '0 0 10px rgba(0,0,0,0.5)',
     position: 'relative',
     paddingRight: 35 // Space for tick icon
+  },
+  mobileEventCategory: {
+    fontSize: '0.7rem',
+    fontWeight: 700,
+    color: theme.color.secondary.main,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginTop: 4,
+    fontFamily: theme.typography.secondary
   },
   mobileEventTime: {
     fontSize: '0.8rem',
