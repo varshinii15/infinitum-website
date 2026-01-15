@@ -250,10 +250,58 @@
         width: 160px;
         height: 100px;
     }
+
+    /* Mobile Swiper Carousel Styles */
+    .swiperContainer {
+        width: 100%;
+        padding: 20px 0 50px 0;
+    }
+
+    .swiper {
+        width: 100%;
+        padding-bottom: 40px;
+    }
+
+    .card {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+
+    .imageContainer {
+        width: 150px;
+        height: 150px;
+    }
+
+    .name {
+        font-size: 1rem;
+    }
+
+    .designation {
+        font-size: 0.75rem;
+    }
+}
+
+/* Swiper pagination styling - applies globally */
+:global(.swiper-pagination-bullet) {
+    background: rgba(199, 32, 113, 0.4);
+    opacity: 1;
+    width: 10px;
+    height: 10px;
+}
+
+:global(.swiper-pagination-bullet-active) {
+    background: #c72071;
+    box-shadow: 0 0 10px rgba(199, 32, 113, 0.6);
 }
 
 @media (max-width: 480px) {
     .heading {
         font-size: 1rem;
+    }
+
+    .imageContainer {
+        width: 120px;
+        height: 120px;
     }
 }

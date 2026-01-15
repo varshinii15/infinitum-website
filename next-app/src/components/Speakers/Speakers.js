@@ -1,6 +1,10 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
 import styles from './Speakers.module.css';
 import { useSound } from '@/context/SoundContext';
 
@@ -22,6 +26,12 @@ const SPEAKERS_DATA = [
         image: "/images/speakers/savitha-ramesh.jpg",
         name: "Savitha Ramesh",
         designation: "Vice President-Head of Services Delivery, Psiog Digital",
+        type: "Speakers"
+    },
+    {
+        image: "/images/speakers/jansirani.jpg",
+        name: "Jansi Rani S",
+        designation: "Director - Technology, Verticurl",
         type: "Speakers"
     },
     {
@@ -73,15 +83,15 @@ const SPEAKERS_DATA = [
         type: "Speakers"
     },
     {
-        image: "/images/speakers/radhakrishnan.jpg",
-        name: "Radhakrishnan Ramasamy",
-        designation: "Senior Engineering Manager, Walmart",
-        type: "Speakers"
-    },
-    {
         image: "/images/speakers/lovelynrose.jpg",
         name: "Lovelyn Rose",
         designation: "Founder and CEO, Lysa Solutions",
+        type: "Speakers"
+    },
+    {
+        image: "/images/speakers/radhakrishnan.jpg",
+        name: "Radhakrishnan Ramasamy",
+        designation: "Senior Engineering Manager, Walmart",
         type: "Speakers"
     },
     {
@@ -100,9 +110,18 @@ const SPEAKERS_DATA = [
 
 export default function Speakers() {
     const { isMuted } = useSound();
+    const [isMobile, setIsMobile] = useState(false);
 
     // Audio ref for hover sound
     const hoverSoundRef = useRef(null);
+
+    // Mobile detection
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Initialize audio on mount
     useEffect(() => {
@@ -139,7 +158,46 @@ export default function Speakers() {
                 <div className={styles.toBeAnnounced}>
                     To Be Announced
                 </div>
+            ) : isMobile ? (
+                /* Mobile: Horizontal Swiper Carousel */
+                <div className={styles.swiperContainer}>
+                    <Swiper
+                        modules={[Autoplay, Pagination]}
+                        spaceBetween={16}
+                        slidesPerView={1.15}
+                        centeredSlides={true}
+                        loop={true}
+                        autoplay={{
+                            delay: 3500,
+                            disableOnInteraction: false,
+                            pauseOnMouseEnter: true
+                        }}
+                        pagination={{ clickable: true }}
+                        className={styles.swiper}
+                    >
+                        {SPEAKERS_DATA.map((speaker, idx) => (
+                            <SwiperSlide key={idx}>
+                                <div className={styles.card}>
+                                    <div className={styles.imageContainer}>
+                                        <img
+                                            src={speaker.image}
+                                            alt={speaker.name}
+                                            className={styles.image}
+                                        />
+                                    </div>
+                                    <div className={styles.info}>
+                                        <h4 className={styles.name}>{speaker.name}</h4>
+                                        {speaker.designation && (
+                                            <p className={styles.designation}>{speaker.designation}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </SwiperSlide>
+                        ))}
+                    </Swiper>
+                </div>
             ) : (
+                /* Desktop: Original Grid Layout */
                 <div className={styles.speakersList}>
                     {Object.entries(groupedSpeakers).map(([type, speakers], index) => (
                         <div
