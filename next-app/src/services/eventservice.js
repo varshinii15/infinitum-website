@@ -107,19 +107,19 @@ export const eventService = {
     // --- User Dashboard ---
     // Get events registered by the logged-in user
     getUserEvents: async () => {
-        const response = await api.get('/api/events/user');
+        const response = await api.get('/api/events/registrations');
         return response.data;
     },
 
     // Get workshops registered by the logged-in user
     getUserWorkshops: async () => {
-        const response = await api.get('/api/events/user/workshops');
+        const response = await api.get('/api/events/workshops/registrations');
         return response.data;
     },
 
     // Get papers registered by the logged-in user
     getUserPapers: async () => {
-        const response = await api.get('/api/events/user/paper');
+        const response = await api.get('/api/events/papers/registrations');
         return response.data;
     }
 };

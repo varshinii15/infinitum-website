@@ -41,6 +41,12 @@ const SPEAKERS_DATA = [
         type: "Speakers"
     },
     {
+        image: "/images/speakers/senthilkumar.jpg",
+        name: "Senthilkumar S",
+        designation: "Founder CEO - Open Netrikkan Pvt Ltd",
+        type: "Speakers"
+    },
+    {
         image: "/images/speakers/supriya.jpg",
         name: "Supriya Rajamanickam",
         designation: "Senior Technical Leader, Cisco Systems",
