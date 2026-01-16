@@ -39,22 +39,22 @@ const CATEGORY_CONFIG = {
 const MOCK_EVENTS = [
     {
         eventId: 'WS01',
-        eventName: 'Workshop 1',
+        eventName: 'AI Infrastructure: From Big Picture to Everyday Reality',
         category: 'Workshop',
     },
     {
-        eventId: 'MOCK_WS02',
-        eventName: 'Workshop 2',
+        eventId: 'WS02',
+        eventName: 'Machine Learning Fundamentals',
         category: 'Workshop',
     },
     {
-        eventId: 'MOCK_WS03',
-        eventName: 'Workshop 3',
+        eventId: 'WS03',
+        eventName: 'Threat Detection Modelling',
         category: 'Workshop',
     },
     {
         eventId: 'PRP03',
-        eventName: 'Paper Presentation',
+        eventName: 'AI and Emerging Trends',
         category: 'Paper Presentation',
     }
 ];
@@ -113,11 +113,23 @@ export default function EventsGrid() {
     };
 
     // Combine real events with mock data, excluding Thooral Hackathon
+    // Swap neXus (EVNT02) with AI Infrastructure (WS01)
     const allEvents = useMemo(() => {
         const realEvents = eventsData.filter(
             event => event.eventName !== 'Thooral Hackathon'
         );
-        return [...realEvents, ...MOCK_EVENTS];
+        const combined = [...realEvents, ...MOCK_EVENTS];
+
+        // Find indices of neXus and AI Infrastructure
+        const nexusIndex = combined.findIndex(e => e.eventId === 'EVNT02');
+        const aiInfraIndex = combined.findIndex(e => e.eventId === 'WS01');
+
+        // Swap them if both are found
+        if (nexusIndex !== -1 && aiInfraIndex !== -1) {
+            [combined[nexusIndex], combined[aiInfraIndex]] = [combined[aiInfraIndex], combined[nexusIndex]];
+        }
+
+        return combined;
     }, []);
 
     const getCategoryConfig = (category) => {

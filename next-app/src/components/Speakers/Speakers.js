@@ -23,6 +23,12 @@ const SPEAKERS_DATA = [
     //     type: "Keynote Speaker"
     // }
     {
+        image: "/images/speakers/subramanian.jpg",
+        name: "K Subramanian",
+        designation: "Former Global Head of Delivery and Governance , Tata Consultancy Services",
+        type: "Speakers"
+    },
+    {
         image: "/images/speakers/savitha-ramesh.jpg",
         name: "Savitha Ramesh",
         designation: "Vice President-Head of Services Delivery, Psiog Digital",
