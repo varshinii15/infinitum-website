@@ -44,7 +44,7 @@ const MOCK_EVENTS = [
     },
     {
         eventId: 'WS02',
-        eventName: 'Machine Learning Fundamentals',
+        eventName: 'Product Prototyping for Industry Applications',
         category: 'Workshop',
     },
     {
