@@ -16,6 +16,7 @@ import Sponsors from '@/components/Sponsors';
 import Speakers from '@/components/Speakers';
 import Collaboration from '@/components/Collaboration';
 import { HomeFooter } from '@/components/HomeFooter';
+import FAQ from '@/components/FAQ';
 
 // Original had: import { Secuence } from '../components/Secuence';
 // Note: I need to ensure import paths are correct. @/ is src/
@@ -166,6 +167,7 @@ class Component extends React.Component {
             <EventsGrid />
             <Speakers />
             <Sponsors />
+            <FAQ />
             <HomeFooter />
           </div>
         </SecuenceComponent>
