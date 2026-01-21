@@ -322,7 +322,7 @@ export const workshopsData = [
         "club_id": {
             "$oid": "69495a6a719d1b3bd5a9e7cd"
         },
-        "workshopName": "AI Infrastructure: From Big Picture to Everyday Reality",
+        "workshopName": "AI Infrastructure\u2060: From Big Picture to Everyday Reality",
         "date": {
             "$date": "2026-02-13T09:00:00.000Z"
         },

@@ -35,10 +35,14 @@ export default function EventShowcase({ sounds, initialEventId }) {
     }, [searchParams]);
 
     const [activeEventIndex, setActiveEventIndex] = useState(0);
+    const activeEventIndexRef = useRef(activeEventIndex);
+    useEffect(() => { activeEventIndexRef.current = activeEventIndex; }, [activeEventIndex]);
+    
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const prevCategoryRef = useRef(category);
     const [hasInitialSet, setHasInitialSet] = useState(false); // Track if initial event is set
     const [isMobile, setIsMobile] = useState(false); // Track mobile view
     const [touchStart, setTouchStart] = useState(null);
@@ -117,6 +121,9 @@ export default function EventShowcase({ sounds, initialEventId }) {
     // Load events based on category
     useEffect(() => {
         console.log('🔄 Category changed to:', category);
+        const isCategoryChange = prevCategoryRef.current !== category;
+        prevCategoryRef.current = category;
+
         const loadEvents = async () => {
             setIsLoading(true);
             console.log('📥 Loading events for category:', category);
@@ -192,7 +199,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
                 setEvents(items);
 
                 // Deep Linking Logic
-                if (effectiveEventId && !hasInitialSet) {
+                if (effectiveEventId) {
                     const idx = items.findIndex(e =>
                         (e.eventId === effectiveEventId) ||
                         (e.workshopId === effectiveEventId) ||
@@ -222,9 +229,16 @@ export default function EventShowcase({ sounds, initialEventId }) {
                             if (items.length > 0) setActiveEventIndex(0);
                         }
                     }
-                } else if (!hasInitialSet) {
-                    // No deep link, normal load
-                    setActiveEventIndex(0);
+                } else {
+                    // No deep link URL parameter.
+                    // If the category has changed, we must reset the index to 0.
+                    // Otherwise, we only reset if it's the very first load or if index is invalid.
+                    if (isCategoryChange || !hasInitialSet) {
+                        setActiveEventIndex(0);
+                    } else if (activeEventIndexRef.current >= items.length) {
+                        // Safety check: ensure index is valid if data changed (e.g. fewer items)
+                        setActiveEventIndex(0);
+                    }
                 }
 
             } catch (error) {
@@ -234,7 +248,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
             }
         };
         loadEvents();
-    }, [category, effectiveEventId, hasInitialSet, isAuthenticated]); // Added dependencies
+    }, [category, effectiveEventId, hasInitialSet, isAuthenticated]); // Removed activeEventIndex to avoid re-fetching on swipe
 
     // Fetch full details - No longer needed as all data is hardcoded
     useEffect(() => {

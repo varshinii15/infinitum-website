@@ -269,13 +269,8 @@ const Schedule = ({ classes, sounds }) => {
         const eventInfo = getEventInfo(title);
         if (eventInfo) {
             // Navigate to appropriate route based on type
-            if (eventInfo.type === 'workshop') {
-                router.push(`/events/${eventInfo.id}`);
-            } else if (eventInfo.type === 'paper') {
-                router.push(`/events/${eventInfo.id}`);
-            } else {
-                router.push(`/events/${eventInfo.id}`);
-            }
+            // Directly navigate to query param URL to avoid redirect chain
+            router.push(`/events?id=${eventInfo.id}`);
             if (sounds?.click) sounds.click.play();
         }
     };
