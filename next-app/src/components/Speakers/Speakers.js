@@ -71,15 +71,15 @@ const SPEAKERS_DATA = [
         type: "Speakers"
     },
     {
-        image: "/images/speakers/kapil.jpeg",
-        name: "Kapil",
-        designation: "Founder/CEO, dossier.nexus",
-        type: "Speakers"
-    },
-    {
         image: "/images/speakers/karthick.jpg",
         name: "Karthik Ramachandran",
         designation: "Program Manager, Bosch Global Software Technologies",
+        type: "Speakers"
+    },
+    {
+        image: "/images/speakers/kapil.jpeg",
+        name: "Kapil",
+        designation: "Founder/CEO, dossier.nexus",
         type: "Speakers"
     },
     {
