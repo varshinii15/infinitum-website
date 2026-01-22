@@ -259,57 +259,9 @@ export const eventsData = [
         "prizePool": "₹8,000",
         "teamSize": 1,
         "image": "/images/events/codemania_website.png"
-    },
-
-    {
-        "_id": { "$oid": "695a3d878baa56af3270688b" },
-        "eventId": "EVNT07",
-        "eventName": "Thooral Hackathon",
-        "category": "Technical",
-        "oneLineDescription": "From idea to impact—design, document, build, and present innovative solutions.",
-        "description": "Thooral Hackathon is a 2-day technical event designed to simulate a real-world software engineering lifecycle.",
-        "club_id": { "$oid": "69495a6a719d1b3bd5a9e7cd" },
-        "rounds": [
-            {
-                "title": "Ideation & Pitching",
-                "tagline": "Strong ideas set the foundation.",
-                "description": "Teams analyze the problem statement and present innovative solutions through a structured PPT pitch.",
-                "_id": { "$oid": "695a3d878baa56af3270688c" }
-            },
-            {
-                "title": "Documentation & System Design",
-                "tagline": "Plan it well before you build it.",
-                "description": "Participants prepare essential software artifacts including SRS documents and UML diagrams.",
-                "_id": { "$oid": "695a3d878baa56af3270688d" }
-            },
-            {
-                "title": "Implementation Phase",
-                "tagline": "Transform ideas into working systems.",
-                "description": "Teams develop working prototypes or applications.",
-                "_id": { "$oid": "695a3d878baa56af3270688e" }
-            },
-            {
-                "title": "Final Presentation",
-                "tagline": "Present impact, innovation, and execution.",
-                "description": "Teams demonstrate their solution and present before judges.",
-                "_id": { "$oid": "695a3d878baa56af3270688f" }
-            }
-        ],
-        "contacts": [
-            { "name": "Hackathon Organizer", "mobile": "9876543212", "_id": { "$oid": "695a3d878baa56af32706890" } }
-        ],
-        "hall": "Computer Center",
-        "eventRules": "Follow all guidelines. Plagiarism leads to disqualification. Organisers' decisions are final.",
-        "date": { "$date": "2026-02-01T09:00:00.000Z" },
-        "closed": false,
-        "dateAndTime": "Feb 13, 10:00 AM – 4:30 PM | Feb 14, 9:00 AM – 3:00 PM",
-        "scheduleStart": "10:00",
-        "scheduleEnd": "16:30",
-        "scheduleDay": "day1",
-        "prizePool": "₹25,000",
-        "teamSize": 4,
-        "image": "/images/events/paper_presentation.png"
     }
+
+
 ]
 
 
