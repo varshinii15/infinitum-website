@@ -87,7 +87,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
     // Handle effectiveEventId to set correct category
     useEffect(() => {
         if (effectiveEventId && !hasInitialSet) {
-            console.log("Deep linking to event:", effectiveEventId);
+
             // Check all data sources for the effectiveEventId
             let targetEvent = eventsData.find(e => e.eventId === effectiveEventId);
             let targetCat = 'events';
@@ -102,7 +102,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
             }
 
             if (targetEvent) {
-                console.log("Found event category for effectiveEventId:", targetCat);
+
                 if (category !== targetCat) {
                     setCategory(targetCat);
                 }
@@ -114,19 +114,17 @@ export default function EventShowcase({ sounds, initialEventId }) {
 
     // Debug mount/unmount
     useEffect(() => {
-        console.log('🏗️ EventShowcase MOUNTED');
-        return () => console.log('🗑️ EventShowcase UNMOUNTED');
     }, []);
 
     // Load events based on category
     useEffect(() => {
-        console.log('🔄 Category changed to:', category);
+
         const isCategoryChange = prevCategoryRef.current !== category;
         prevCategoryRef.current = category;
 
         const loadEvents = async () => {
             setIsLoading(true);
-            console.log('📥 Loading events for category:', category);
+
             try {
                 let items = [];
                 if (category === 'events') {
@@ -173,7 +171,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
                         let registeredIds = [];
                         if (category === 'events') {
                             const res = await eventService.getUserEvents();
-                            console.log(res);
+
                             const list = Array.isArray(res) ? res : (res.events || res.data || []);
                             registeredIds = list.map(e => e.eventId);
                         } else if (category === 'workshops') {
@@ -195,7 +193,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
                     }
                 }
 
-                console.log('✅ Setting events:', items.length);
+
                 setEvents(items);
 
                 // Deep Linking Logic
@@ -207,7 +205,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
                     );
 
                     if (idx !== -1) {
-                        console.log("🎯 Found effective event at index:", idx);
+
                         setActiveEventIndex(idx);
                         setHasInitialSet(true);
                     } else {
@@ -221,7 +219,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
                         else if (papersData.some(p => p.paperId === effectiveEventId)) expectedCategory = 'papers';
 
                         if (category !== expectedCategory) {
-                            console.log(`⏳ Waiting for category switch to ${expectedCategory}...`);
+
                         } else {
                             // Correct category but ID not found? Maybe invalid ID.
                             console.warn("⚠️ Effective event ID not found in its expected category:", category);
@@ -249,6 +247,30 @@ export default function EventShowcase({ sounds, initialEventId }) {
         };
         loadEvents();
     }, [category, effectiveEventId, hasInitialSet, isAuthenticated]); // Removed activeEventIndex to avoid re-fetching on swipe
+
+    // Robust Image Preloading
+    useEffect(() => {
+        const preloadImage = (src) => {
+            if (!src) return;
+            const img = new window.Image();
+            img.src = src;
+        };
+
+        // 1. Preload current category items first (Priority)
+        events.forEach(item => {
+            if (item.image) preloadImage(item.image);
+        });
+
+        // 2. Preload all other images in the background
+        const allData = [...eventsData, ...workshopsData, ...papersData];
+        requestAnimationFrame(() => {
+            allData.forEach(item => {
+                // Skip if already loaded (browser cache handles it, but good to be efficient)
+                if (item.image) preloadImage(item.image);
+            });
+        });
+
+    }, [events]); // Re-run when events list updates (e.g. category switch)
 
     // Fetch full details - No longer needed as all data is hardcoded
     useEffect(() => {
@@ -496,7 +518,7 @@ export default function EventShowcase({ sounds, initialEventId }) {
                         className={`${styles.dropdownItem} ${category === cat ? styles.selected : ''} `}
                         onClick={(e) => {
                             e.stopPropagation();
-                            console.log('🖱️ Dropdown item clicked:', cat);
+
                             if (sounds?.click) sounds.click.play();
 
                             // Always navigate to the clean category URL
@@ -1045,58 +1067,6 @@ export default function EventShowcase({ sounds, initialEventId }) {
                     </div>
                 </div>
             )}
-            {/* Preload images for smoother transitions - All Categories */}
-            <div style={{ display: 'none' }} aria-hidden="true">
-                {/* Preload current category events */}
-                {events.map((event, index) => {
-                    const img = event.image || DEFAULT_EVENT_IMAGE;
-                    if (!img || index === activeEventIndex) return null;
-                    return (
-                        <img
-                            key={`preload-current-${event.eventId || event.workshopId || event.paperId || index}`}
-                            src={img}
-                            alt=""
-                            width={400}
-                            height={400}
-                            onError={(e) => {
-                                if (event.localImage) {
-                                    e.currentTarget.src = event.localImage;
-                                }
-                            }}
-                        />
-                    );
-                })}
-                {/* Preload Workshops */}
-                {workshopsData.map((w, index) => {
-                    // Avoid duplicating if already in 'events' (which it won't be, but good to be safe if Logic changes)
-                    // Only preload if not currently viewing workshops (otherwise above loop handles it)
-                    if (category === 'workshops') return null;
-                    const img = w.image || DEFAULT_EVENT_IMAGE;
-                    return (
-                        <img
-                            key={`preload-workshop-${w.workshopId || index}`}
-                            src={img}
-                            alt=""
-                            width={400}
-                            height={400}
-                        />
-                    )
-                })}
-                {/* Preload Papers */}
-                {papersData.map((p, index) => {
-                    if (category === 'papers') return null;
-                    const img = p.image || DEFAULT_EVENT_IMAGE;
-                    return (
-                        <img
-                            key={`preload-paper-${p.paperId || index}`}
-                            src={img}
-                            alt=""
-                            width={400}
-                            height={400}
-                        />
-                    )
-                })}
-            </div>
         </div>
     );
 }

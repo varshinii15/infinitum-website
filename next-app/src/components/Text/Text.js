@@ -29,26 +29,26 @@ class Component extends React.PureComponent {
     randomCharacters: RANDOM_CHARACTERS
   };
 
-  componentWillUnmount () {
+  componentWillUnmount() {
     this.cancelAnimate();
   }
 
-  enter () {
+  enter() {
     this.animate(true);
   }
 
-  exit () {
+  exit() {
     this.animate(false);
   }
 
-  cancelAnimate () {
+  cancelAnimate() {
     if (this.animationTick) {
       this.animationTick.cancel();
       this.animationTick = null;
     }
   }
 
-  playSound () {
+  playSound() {
     const { energy, sounds } = this.props;
 
     if (energy.animate && sounds.typing && !sounds.typing.playing()) {
@@ -56,7 +56,7 @@ class Component extends React.PureComponent {
     }
   }
 
-  stopSound () {
+  stopSound() {
     const { sounds } = this.props;
 
     if (sounds.typing) {
@@ -64,8 +64,9 @@ class Component extends React.PureComponent {
     }
   }
 
-  animate (isEntering) {
-    const { children, scheme } = this.props;
+  animate(isEntering) {
+    const { children: rawChildren, scheme } = this.props;
+    const children = String(rawChildren ?? '');
 
     if (children.length === 0) {
       return;
@@ -80,8 +81,9 @@ class Component extends React.PureComponent {
     }
   }
 
-  getDuration () {
-    const { theme, children, stableTime } = this.props;
+  getDuration() {
+    const { theme, children: rawChildren, stableTime } = this.props;
+    const children = String(rawChildren ?? '');
 
     if (stableTime) {
       return theme.animation.time;
@@ -98,8 +100,9 @@ class Component extends React.PureComponent {
     return duration;
   }
 
-  animateTransition (isEntering) {
-    const { children } = this.props;
+  animateTransition(isEntering) {
+    const { children: rawChildren } = this.props;
+    const children = String(rawChildren ?? '');
     const duration = this.getDuration();
     const isInverted = !isEntering;
 
@@ -125,8 +128,9 @@ class Component extends React.PureComponent {
     this.animationTick = createAnimationTick({ duration, isInverted, onCall, onDone });
   }
 
-  animateTransform (isEntering) {
-    const { children, randomCharacters } = this.props;
+  animateTransform(isEntering) {
+    const { children: rawChildren, randomCharacters } = this.props;
+    const children = String(rawChildren ?? '');
     const duration = this.getDuration();
     const isInverted = !isEntering;
 
@@ -160,13 +164,13 @@ class Component extends React.PureComponent {
     this.animationTick = createAnimationTick({ duration, isInverted, onCall, onDone });
   }
 
-  setOverlayText (text) {
+  setOverlayText(text) {
     if (this.overlayTextElement) {
       this.overlayTextElement.textContent = text;
     }
   }
 
-  render () {
+  render() {
     const {
       theme,
       classes,
