@@ -10,6 +10,7 @@ import axios from 'axios';
 import { withStyles } from '@/tools/withStyles';
 import { Secuence as SecuenceComponent } from '@/components/Secuence';
 import { Button } from '@/components/Button';
+import colleges from '@/app/CollegeList';
 
 // --- Mobile Quick Actions Component ---
 const MobileActions = ({ user, classes, onQrClick, onIdClick, onViewIdClick, isIdLoading, viewIdUrl, idToUpload }) => (
@@ -112,26 +113,76 @@ class IdentityNode extends React.Component {
 
         // --- GAMIFICATION LOGIC FROM DATA ---
         const { user } = this.props;
-
-        // COLOR: Payment Status (Cyan = Paid/Online, Red = Unpaid/Locked)
-        const baseColorHex = user.generalFeePaid ? 0x00f0ff : 0xff0055;
-
-        // COMPLEXITY/SPEED: Year (Fallback to 1 if not present)
         const year = user.year || 1;
-        this.speedMultiplier = 0.5 + (year * 0.2); // Faster for seniors
-
-        // SHAPE: Origin (PSG = Core/Organic, External = Prism/Sharp)
         const isInternal = user.isPSGStudent;
+        const isPaid = user.generalFeePaid;
+
+        let baseColorHex, innerGeometry, outerGeometry;
+        this.speedMultiplier = 0.5 + (year * 0.2); // Base speed
+
+        switch (year) {
+            case 1: // Freshman: Simple, foundational shapes
+                baseColorHex = isPaid ? 0x00f0ff : 0xff0055; // Cyan / Red
+                innerGeometry = isInternal ? new THREE.BoxGeometry(1.5, 1.5, 1.5) : new THREE.TetrahedronGeometry(1.4, 0);
+                outerGeometry = new THREE.BoxGeometry(2.2, 2.2, 2.2);
+                this.speedMultiplier = 0.6;
+                break;
+            case 2: // Sophomore: More complex, developing
+                baseColorHex = isPaid ? 0x00ff88 : 0xff6b35; // Green / Orange
+                innerGeometry = isInternal ? new THREE.OctahedronGeometry(1.3, 0) : new THREE.ConeGeometry(1, 2, 4);
+                outerGeometry = new THREE.OctahedronGeometry(2.0, 1);
+                this.speedMultiplier = 0.8;
+                break;
+            case 3: // Junior: Established, intricate
+                baseColorHex = isPaid ? 0xffff00 : 0xff44ff; // Yellow / Magenta
+                innerGeometry = isInternal ? new THREE.IcosahedronGeometry(1.2, 0) : new THREE.TorusKnotGeometry(0.8, 0.3, 100, 8);
+                outerGeometry = new THREE.IcosahedronGeometry(1.8, 1);
+                this.speedMultiplier = 1.0;
+                // Add a single ring for juniors
+                const ringGeometry = new THREE.TorusGeometry(2.8, 0.02, 16, 100);
+                const ringMaterial = new THREE.MeshBasicMaterial({ color: baseColorHex, transparent: true, opacity: 0.6 });
+                this.ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+                this.scene.add(this.ringMesh);
+                break;
+            case 4: // Senior: Advanced, refined
+                baseColorHex = isPaid ? 0xff8c00 : 0x9400d3; // Orange / Dark Violet
+                innerGeometry = isInternal ? new THREE.DodecahedronGeometry(1.4, 0) : new THREE.CylinderGeometry(1, 1, 2, 6);
+                outerGeometry = new THREE.DodecahedronGeometry(2.2, 1);
+                this.speedMultiplier = 1.2;
+                // Add two rings for seniors
+                const ring1 = new THREE.TorusGeometry(2.8, 0.02, 16, 100);
+                const ring2 = new THREE.TorusGeometry(3.1, 0.02, 16, 100);
+                const ringMat = new THREE.MeshBasicMaterial({ color: baseColorHex, transparent: true, opacity: 0.7 });
+                this.ringMesh = new THREE.Mesh(ring1, ringMat);
+                this.ringMesh2 = new THREE.Mesh(ring2, ringMat);
+                this.scene.add(this.ringMesh);
+                this.scene.add(this.ringMesh2);
+                break;
+            case 5: // Post-grad/Master: Mastered, complex & stable
+            default:
+                baseColorHex = isPaid ? 0xffffff : 0xaaaaaa; // White / Grey
+                innerGeometry = isInternal ? new THREE.TorusKnotGeometry(1, 0.2, 128, 16) : new THREE.SphereGeometry(1.2, 32, 16);
+                outerGeometry = new THREE.SphereGeometry(2.5, 64, 32);
+                this.speedMultiplier = 1.4;
+                // Three rings for masters
+                const mRing1 = new THREE.TorusGeometry(2.8, 0.03, 16, 100);
+                const mRing2 = new THREE.TorusGeometry(3.2, 0.02, 16, 100);
+                const mRing3 = new THREE.TorusGeometry(3.5, 0.01, 16, 100);
+                const mRingMat = new THREE.MeshBasicMaterial({ color: baseColorHex, transparent: true, opacity: 0.8 });
+                this.ringMesh = new THREE.Mesh(mRing1, mRingMat);
+                this.ringMesh2 = new THREE.Mesh(mRing2, mRingMat);
+                this.ringMesh3 = new THREE.Mesh(mRing3, mRingMat);
+                this.scene.add(this.ringMesh);
+                this.scene.add(this.ringMesh2);
+                this.scene.add(this.ringMesh3);
+                break;
+        }
 
         // 3. Objects Group
         this.coreGroup = new THREE.Group();
         this.scene.add(this.coreGroup);
 
         // A. INNER CORE (The Identity)
-        const innerGeometry = isInternal
-            ? new THREE.IcosahedronGeometry(1.2, 1) // Organic D20 look
-            : new THREE.OctahedronGeometry(1.2, 0); // Sharp Diamond look
-
         const innerMaterial = new THREE.MeshBasicMaterial({
             color: baseColorHex,
             wireframe: true,
@@ -142,7 +193,6 @@ class IdentityNode extends React.Component {
         this.coreGroup.add(this.innerMesh);
 
         // B. OUTER SHELL (The Shield)
-        const outerGeometry = new THREE.IcosahedronGeometry(1.8, 1);
         const outerMaterial = new THREE.MeshBasicMaterial({
             color: baseColorHex,
             wireframe: true,
@@ -152,18 +202,7 @@ class IdentityNode extends React.Component {
         this.outerMesh = new THREE.Mesh(outerGeometry, outerMaterial);
         this.coreGroup.add(this.outerMesh);
 
-        // C. SENIOR RING (Rank Indicator - Only for Year 3+)
-        if (year >= 3) {
-            const ringGeometry = new THREE.TorusGeometry(2.8, 0.02, 16, 100);
-            const ringMaterial = new THREE.MeshBasicMaterial({
-                color: baseColorHex,
-                transparent: true,
-                opacity: 0.6
-            });
-            this.ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-            // Add to scene directly so it rotates independently
-            this.scene.add(this.ringMesh);
-        }
+        // C. SENIOR RING (Rank Indicator - Only for Year 3+) - Logic moved to switch case
 
         // D. LIGHTING (Glow Effect)
         const pointLight = new THREE.PointLight(baseColorHex, user.generalFeePaid ? 2 : 0.8, 10);
@@ -208,6 +247,14 @@ class IdentityNode extends React.Component {
         if (this.ringMesh) {
             this.ringMesh.rotation.x = Math.PI / 2 + (Math.sin(time * 0.5) * 0.1);
             this.ringMesh.rotation.y = time * 0.3;
+        }
+        if (this.ringMesh2) {
+            this.ringMesh2.rotation.x = Math.PI / 2 + (Math.cos(time * 0.4) * 0.15);
+            this.ringMesh2.rotation.y = -time * 0.2;
+        }
+        if (this.ringMesh3) {
+            this.ringMesh3.rotation.x = Math.PI / 2 + (Math.sin(time * 0.3) * 0.2);
+            this.ringMesh3.rotation.y = time * 0.1;
         }
 
         // Gentle float of the whole group
@@ -803,7 +850,37 @@ const styles = theme => {
             '&:active': {
                 transform: 'scale(0.95)'
             }
-        }
+        },
+        editInput: {
+            background: 'rgba(255,255,255,0.1)',
+            color: '#fff',
+            padding: 10,
+            borderRadius: 6,
+            border: '1px solid rgba(255,255,255,0.2)',
+            fontSize: '0.9rem',
+            width: '100%',
+            boxSizing: 'border-box',
+            '&:focus': {
+                outline: 'none',
+                borderColor: theme.color.secondary.main,
+                boxShadow: `0 0 5px ${theme.color.secondary.main}40`
+            },
+            '&::placeholder': {
+                color: 'rgba(255,255,255,0.7)'
+            }
+        },
+        editSelect: {
+            appearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c72071' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 12px center',
+            paddingRight: 36,
+            '& option': {
+                background: '#1a020b',
+                color: '#eeeeee',
+                border: `1px solid ${theme.color.secondary.main}`
+            }
+        },
     };
 };
 
@@ -825,12 +902,15 @@ class ProfilePage extends React.Component {
             idToUploadPreview: null, // Preview URL for staged file
             idToUploadType: null, // Type of staged file
             openAccordion: null, // Tracks which accordion is open on mobile
-            isMobile: false // Tracks if mobile view is active
+            isMobile: false, // Tracks if mobile view is active
+            isEditing: false,
+            formData: {},
+            isSaving: false,
         };
         this.fileInputRef = React.createRef();
     }
 
-    // Toggle QR Modal
+    // Toggle QR Expansion
     toggleQRExpansion = () => {
         this.setState(prev => ({ isQRExpanded: !prev.isQRExpanded }));
     }
@@ -889,13 +969,59 @@ class ProfilePage extends React.Component {
     handleLogout = async () => {
         try {
             const { authService } = await import('@/services/authService');
-            const { clearAuthToken } = await import('@/services/api');
             await authService.logout();
-            clearAuthToken();
             window.location.href = '/auth?type=login';
         } catch (error) {
             console.error('Logout error:', error);
+            // Even if logout fails on server, clear client-side auth
+            const { clearAuthToken } = await import('@/services/api');
+            clearAuthToken();
             window.location.href = '/auth?type=login';
+        }
+    };
+
+    handleEdit = () => {
+        const { user } = this.state;
+        this.setState({
+            isEditing: true,
+            formData: {
+                name: user.name || '',
+                phone: user.phone || '',
+                college: user.college || '',
+                department: user.department || '',
+                year: user.year || '',
+                discoveryMethod: user.discoveryMethod || ''
+            }
+        });
+    };
+
+    handleCancelEdit = () => {
+        this.setState({ isEditing: false, formData: {} });
+    };
+
+    handleFormChange = (e) => {
+        const { name, value } = e.target;
+        this.setState(prevState => ({
+            formData: {
+                ...prevState.formData,
+                [name]: value
+            }
+        }));
+    };
+
+    handleSave = async () => {
+        this.setState({ isSaving: true });
+        try {
+            const { authService } = await import('@/services/authService');
+            await authService.updateProfile(this.state.formData);
+            // Refresh user data
+            await this.checkAuth();
+            this.setState({ isEditing: false, isSaving: false });
+            alert('Profile updated successfully!');
+        } catch (error) {
+            console.error('Failed to update profile', error);
+            alert(error.response?.data?.message || 'Failed to update profile.');
+            this.setState({ isSaving: false });
         }
     };
 
@@ -1034,7 +1160,7 @@ class ProfilePage extends React.Component {
 
     render() {
         const { classes } = this.props;
-        const { user, loading, registeredEvents, isQRExpanded, isUploadingId, viewIdUrl, isIdViewerOpen, idCardPreviewUrl, idCardPreviewType, isIdLoading, idToUpload, idToUploadPreview, idToUploadType, openAccordion, isMobile } = this.state;
+        const { user, loading, registeredEvents, isQRExpanded, isUploadingId, viewIdUrl, isIdViewerOpen, idCardPreviewUrl, idCardPreviewType, isIdLoading, idToUpload, idToUploadPreview, idToUploadType, openAccordion, isMobile, isEditing, formData, isSaving } = this.state;
 
         // Show loading placeholder with minimum height to prevent footer from jumping
         if (loading || !user) {
@@ -1058,7 +1184,7 @@ class ProfilePage extends React.Component {
             // Normalize category names for grouping
             const category = (event.category || 'general').toLowerCase();
             let groupName = 'Other';
-            if (category.includes('non technical')) groupName = 'Non-Technical';
+            if (category.includes('non technical') || category.includes('non-technical')) groupName = 'Non-Technical';
             else if (category.includes('technical')) groupName = 'Technical';
             else if (category.includes('workshop')) groupName = 'Workshops';
 
@@ -1140,9 +1266,31 @@ class ProfilePage extends React.Component {
                                     className={isMobile ? `${classes.accordionHeader} ${openAccordion === 'profile' ? classes.accordionHeaderOpen : ''}` : ''}
                                     onClick={() => isMobile && this.toggleAccordion('profile')}
                                 >
-                                    <h3 className={classes.panelHeader} style={{ marginBottom: isMobile ? 0 : 10 }}>Profile Details</h3>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                        <h3 className={classes.panelHeader} style={{ marginBottom: isMobile ? 0 : 10 }}>Profile Details</h3>
+                                        {!isMobile && !isEditing && (
+                                            <button
+                                                className={classes.actionBtn}
+                                                onClick={this.handleEdit}
+                                                style={{ padding: '4px 12px', fontSize: '0.7rem', marginLeft: 'auto' }}
+                                            >
+                                                Edit Profile
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className={isMobile ? `${classes.accordionContent} ${openAccordion === 'profile' ? classes.accordionContentOpen : ''}` : ''}>
+                                    {isMobile && !isEditing && (
+                                        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 15 }}>
+                                            <button
+                                                className={classes.actionBtn}
+                                                onClick={this.handleEdit}
+                                                style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                                            >
+                                                Edit Profile
+                                            </button>
+                                        </div>
+                                    )}
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap-reverse', gap: 20, paddingTop: isMobile ? 0 : 15 }}>
 
                                         {/* Info Side */}
@@ -1150,17 +1298,59 @@ class ProfilePage extends React.Component {
                                             <div className={classes.dataGrid}>
                                                 <div className={classes.dataField}>
                                                     <label className={classes.fieldLabel}>Phone</label>
-                                                    <div className={classes.fieldValue}>{user.phone}</div>
+                                                    {isEditing ? (
+                                                        <input type="tel" name="phone" value={formData.phone} onChange={this.handleFormChange} className={classes.editInput} pattern="[0-9]{10}" />
+                                                    ) : (
+                                                        <div className={classes.fieldValue}>{user.phone}</div>
+                                                    )}
                                                 </div>
                                                 <div className={classes.dataField}>
                                                     <label className={classes.fieldLabel}>Department</label>
-                                                    <div className={classes.fieldValue}>{user.department}</div>
+                                                    {isEditing ? (
+                                                        <input type="text" name="department" value={formData.department} onChange={this.handleFormChange} className={classes.editInput} />
+                                                    ) : (
+                                                        <div className={classes.fieldValue}>{user.department}</div>
+                                                    )}
+                                                </div>
+                                                <div className={classes.dataField}>
+                                                    <label className={classes.fieldLabel}>Year</label>
+                                                    {isEditing ? (
+                                                        <select name="year" value={formData.year} onChange={this.handleFormChange} className={`${classes.editInput} ${classes.editSelect}`}>
+                                                            <option value="">Select year</option>
+                                                            <option value="1">1st Year</option>
+                                                            <option value="2">2nd Year</option>
+                                                            <option value="3">3rd Year</option>
+                                                            <option value="4">4th Year</option>
+                                                            <option value="5">5th Year</option>
+                                                        </select>
+                                                    ) : (
+                                                        <div className={classes.fieldValue}>{user.year}</div>
+                                                    )}
                                                 </div>
                                                 <div className={classes.dataField} style={{ gridColumn: '1 / -1' }}>
                                                     <label className={classes.fieldLabel}>College / Institution</label>
-                                                    <div className={classes.fieldValue} style={{ whiteSpace: 'normal', lineHeight: 1.4 }}>{user.college}</div>
+                                                    {isEditing ? (
+                                                        <select name="college" value={formData.college} onChange={this.handleFormChange} className={`${classes.editInput} ${classes.editSelect}`}>
+                                                            <option value="">Select your college</option>
+                                                            {colleges.map((college, index) => (
+                                                                <option key={index} value={college}>{college}</option>
+                                                            ))}
+                                                        </select>
+                                                    ) : (
+                                                        <div className={classes.fieldValue} style={{ whiteSpace: 'normal', lineHeight: 1.4 }}>{user.college}</div>
+                                                    )}
                                                 </div>
                                             </div>
+                                            {isEditing && (
+                                                <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 15 }}>
+                                                    <button className={`${classes.actionBtn} ${classes.btnBack}`} onClick={this.handleCancelEdit} disabled={isSaving}>
+                                                        Cancel
+                                                    </button>
+                                                    <button className={classes.actionBtn} onClick={this.handleSave} disabled={isSaving} style={{ background: '#00ff64', color: '#000', border: 'none', fontWeight: 800 }}>
+                                                        {isSaving ? 'Saving...' : 'Save Changes'}
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* QR Side (Desktop only now) */}
@@ -1301,6 +1491,9 @@ class ProfilePage extends React.Component {
                             </div>
 
                             {/* Action Buttons */}
+                            <div className={classes.actionButtons}>
+                                {/* Buttons are now inside the profile details panel when editing */}
+                            </div>
                         </div>
 
                         {/* Mobile-only Logout Button */}
