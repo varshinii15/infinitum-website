@@ -183,9 +183,10 @@ class Component extends React.Component {
               <a href='https://psiog.com/'>
                 <Image
                   src='/images/sponsors/psiog_logo.png'
-                  height={200}
-                  width={200}
+                  height={220}
+                  width={220}
                   alt='psiog digital logo'
+                  style={{margin: 0}}
                 />
               </a>
             </div>
