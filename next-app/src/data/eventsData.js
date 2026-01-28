@@ -443,14 +443,29 @@ export const papersData = [
         "theme": "Artificial Intelligence",
         "tagline": "Explore the Future of AI and ML",
         "topic": "Recent advances in deep learning, neural networks, and AI applications in real-world scenarios",
-        "rules": "Each team can have a maximum of 4 members. Papers must be original, unpublished, and strictly follow IEEE format (max 2 pages).\nAbstract must be submitted in PDF before deadline. Plagiarism should not exceed 15–20%. Selected papers notified via email.\n15 mins presentation + 5 mins Q&A in PPT/PDF. Participants must report 30 mins before scheduled time.\nProject implementation is added credit; prototypes welcome. Judges’ decision is final.",
+        "themes": [
+            "AI-Based Intelligent Decision Support Systems",
+            "Deep Learning Techniques for Pattern Recognition",
+            "AI in Healthcare Diagnosis and Prediction",
+            "Computer Vision Applications Using Deep Learning",
+            "Generative AI and Large Language Models",
+            "AI for Cybersecurity and Threat Detection",
+            "AI for Internet of Things (AIoT)"
+        ],
+        "rules": "Each team can have a maximum of 4 members.\nPapers must be original, unpublished, and strictly follow IEEE format (max 2 pages including references). Plagiarism should not exceed 15–20% (excluding references).\nAbstract must be submitted in PDF format before the deadline. Selected papers will be intimated via email.\nEach team gets 15 minutes presentation + 5 minutes Q&A. Presentation must be in PPT/PDF format. Participants must report 30 minutes before scheduled time.\nProject implementation is an added credit; prototypes are welcome but not mandatory. Judges' decision is final.",
         "date": {
             "$date": "2026-02-14T09:00:00.000Z"
         },
         "time": "10:00 AM - 12:30 PM",
         "dateAndTime": "Feb 14, 10:00 AM - 12:30 PM",
+        "abstractDeadline": {
+            "$date": "2026-02-06T23:59:59.000Z"
+        },
+        "paperDeadline": {
+            "$date": "2026-02-11T23:59:59.000Z"
+        },
         "deadline": {
-            "$date": "2026-02-01T00:00:00.000Z"
+            "$date": "2026-02-06T00:00:00.000Z"
         },
         "teamSize": "1 to 4",
         "hall": "Department Seminar Hall - CSE",
